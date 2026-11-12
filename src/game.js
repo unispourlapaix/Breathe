@@ -7,6 +7,7 @@
 (function () {
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
+  const treeAtlas = document.getElementById("garden-tree-atlas");
 
   const scoreDisplay = document.getElementById("score-display");
   const comboDisplay = document.getElementById("combo-display");
@@ -17,6 +18,7 @@
   const endReplayBtn = document.getElementById("end-card-replay");
 
   const BUBBLES_TO_FILL_HEART = 35; // nombre de pops pour remplir le cœur et finir la session
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let elapsedMs = 0;
   let score = 0;
   let comboCount = 0;
@@ -177,7 +179,14 @@
   function drawTreeReveal(ctx, dt) {
     if (!treeStateAtReveal) return; // la progression n'a pas encore fini de se résoudre, on attend la frame suivante
 
-    revealProgress = Math.min(1, revealProgress + dt * 0.0009);
+    const leavesBefore = Bonsai.levelToLeafCount(treeStateAtReveal.levelBefore);
+    const leavesAfter = Bonsai.levelToLeafCount(treeStateAtReveal.levelAfter);
+    const gainedLeaf = leavesAfter > leavesBefore;
+    const revealDuration = gainedLeaf ? 2100 : 750;
+    revealProgress = reducedMotion.matches ? 1 : Math.min(1, revealProgress + dt / revealDuration);
+    const sproutProgress = gainedLeaf
+      ? Math.max(0, Math.min(1, (revealProgress - 0.18) / 0.65))
+      : 1;
 
     // petit fond doux derrière l'arbre pour le mettre en valeur
     ctx.save();
@@ -189,19 +198,15 @@
     ctx.fillRect(0, 0, viewW, viewH);
     ctx.restore();
 
-    const scale = Math.min(viewW, viewH) / 220;
-    // une vraie nouvelle feuille n'apparaît que si cette session a fait franchir un palier
-    // (10 niveaux = 1 feuille) ; sinon on montre juste l'arbre tel quel, sans halo trompeur
-    const leavesBefore = Bonsai.levelToLeafCount(treeStateAtReveal.levelBefore);
-    const leavesAfter = Bonsai.levelToLeafCount(treeStateAtReveal.levelAfter);
-    const gainedLeaf = leavesAfter > leavesBefore;
+    const treeSize = Math.min(viewW * 0.82, viewH * 0.38);
+    const treeBase = viewH * 0.68;
 
     ctx.save();
-    ctx.globalAlpha = Math.min(1, revealProgress * 1.5);
-    Bonsai.draw(
-      ctx, viewW / 2, viewH * 0.62, scale * 1.3,
-      treeStateAtReveal.speciesIndex, treeStateAtReveal.levelAfter,
-      gainedLeaf ? revealProgress : null
+    ctx.globalAlpha = Math.min(1, revealProgress / 0.18);
+    GardenScene.drawTree(
+      ctx, treeAtlas, treeStateAtReveal.speciesIndex,
+      viewW / 2, treeBase, treeSize, treeStateAtReveal.levelAfter,
+      gainedLeaf ? { progress: sproutProgress, opacity: 1 } : undefined
     );
     ctx.restore();
 
@@ -227,7 +232,7 @@
       endReplayBtn.classList.add("visible");
       endReplayBtn.textContent = "Rejouer";
       endReplayBtn.style.left = "50%";
-      endReplayBtn.style.top = (viewH * 0.62 + 130) + "px";
+      endReplayBtn.style.top = Math.min(viewH - 52, treeBase + 28) + "px";
       endReplayBtn.style.transform = "translateX(-50%)";
     }
   }
@@ -359,7 +364,7 @@
   });
 
   window.addEventListener("resize", () => {
-    if (running) {
+    if (running || sessionEnded) {
       const dims = resizeCanvas();
       viewW = dims.w; viewH = dims.h;
     }

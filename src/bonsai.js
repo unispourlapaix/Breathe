@@ -214,6 +214,8 @@ const Bonsai = (() => {
         // avant d'ajouter une légère variation aléatoire pour un effet naturel
         const leafRot = cluster.dirAngle + Math.PI / 2 + (rand() - 0.5) * 1.4;
         pts.push({
+          anchorX: cluster.anchorX,
+          anchorY: cluster.anchorY,
           x: cluster.x + Math.cos(angle) * r,
           y: cluster.y + Math.sin(angle) * r,
           size: 4.2 + rand() * 4.2,
@@ -581,12 +583,49 @@ const Bonsai = (() => {
     ctx.restore();
   }
 
+  function drawSprout(ctx, leaf, species, progress) {
+    const stemProgress = Math.min(1, progress / 0.42);
+    const open = Math.max(0, Math.min(1, (progress - 0.22) / 0.68));
+    const unfold = open * open * (3 - 2 * open);
+    const x = leaf.anchorX + (leaf.x - leaf.anchorX) * stemProgress;
+    const y = leaf.anchorY + (leaf.y - leaf.anchorY) * stemProgress;
+
+    ctx.save();
+    ctx.strokeStyle = species.trunkColor;
+    ctx.lineWidth = 0.65;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(leaf.anchorX, leaf.anchorY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    if (progress < 1) {
+      const radius = leaf.size * (1.3 + unfold * 1.6);
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      glow.addColorStop(0, "#ffdd8c");
+      glow.addColorStop(1, "#ffdd8c00");
+      ctx.globalAlpha *= 0.65 * Math.sin(progress * Math.PI);
+      ctx.fillStyle = glow;
+      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    }
+    ctx.restore();
+
+    if (stemProgress === 0) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(leaf.rot + (1 - unfold) * 0.55);
+    ctx.scale(0.15 + unfold * 0.85, 1);
+    const size = leaf.size * (0.22 + unfold * 0.78);
+    drawLeaf(ctx, 0, 0, size, 0, species.leafColor[leaf.colorIdx], species.leafShape);
+    ctx.restore();
+  }
+
   /**
    * Dessine le bonsaï complet à un niveau donné.
    * ctx, cx/cy = base du tronc (point au sol), scale = échelle px par unité, speciesIndex, level (0..888)
-   * highlightProgress (0..1, optionnel) : si fourni, anime un halo sur la toute dernière feuille ajoutée
+   * sproutProgress (0..1, optionnel) : fait pousser la dernière feuille depuis sa branche.
    */
-  function draw(ctx, cx, cy, scale, speciesIndex, level, highlightProgress) {
+  function draw(ctx, cx, cy, scale, speciesIndex, level, sproutProgress) {
     const species = getSpecies(speciesIndex);
     const leafCount = levelToLeafCount(level);
     const { skeleton, positions } = buildLeafPositions(speciesIndex, LEAF_COUNT);
@@ -607,28 +646,8 @@ const Bonsai = (() => {
     const lastIdx = leafCount - 1;
     for (let i = 0; i < leafCount && i < positions.length; i++) {
       const p = positions[i];
-      const isLast = (i === lastIdx) && highlightProgress !== undefined && highlightProgress !== null;
-
-      if (isLast) {
-        // halo pulsant doré derrière la nouvelle feuille
-        const haloPulse = 0.5 + Math.sin(highlightProgress * Math.PI * 4) * 0.5;
-        ctx.save();
-        ctx.globalAlpha = 0.55 * (1 - Math.min(1, highlightProgress));
-        ctx.fillStyle = "#ffe28a";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * (2.2 + haloPulse * 1.2), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        // la feuille elle-même grossit légèrement à son apparition (effet "pop")
-        const growIn = Math.min(1, highlightProgress * 2.2);
-        ctx.save();
-        ctx.globalAlpha = growIn;
-        drawLeaf(ctx, p.x, p.y, p.size * (0.6 + growIn * 0.4), p.rot, species.leafColor[p.colorIdx], species.leafShape);
-        ctx.restore();
-      } else {
-        drawLeaf(ctx, p.x, p.y, p.size, p.rot, species.leafColor[p.colorIdx], species.leafShape);
-      }
+      const progress = i === lastIdx ? sproutProgress ?? 1 : 1;
+      drawSprout(ctx, p, species, progress);
     }
 
     ctx.restore();
@@ -638,5 +657,5 @@ const Bonsai = (() => {
 
   function getLeafCount() { return LEAF_COUNT; }
 
-  return { SPECIES, getSpecies, getTotalSpecies, getLevelsPerTree, getLeafCount, levelToLeafCount, draw };
+  return { SPECIES, getSpecies, getTotalSpecies, getLevelsPerTree, getLeafCount, levelToLeafCount, draw, drawSprout };
 })();

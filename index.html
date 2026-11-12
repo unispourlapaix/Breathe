@@ -164,56 +164,98 @@
 
   /* ---- Écran Jardin (MOD-GARDEN-001) ---- */
   #garden-overlay {
-    position:absolute; top:0; left:0; width:100%; height:100%;
-    background: linear-gradient(180deg,#e4ecdf,#f2efe4 70%);
-    z-index:40; display:flex; flex-direction:column;
-    transform: translateX(100%);
-    transition: transform 0.4s ease;
+    position:absolute; inset:0;
+    background:linear-gradient(160deg,#fff3eb 3%,#f5e1ed 55%,#eee5f5);
+    color:#523652; z-index:40; display:flex; flex-direction:column;
+    visibility:hidden; transform:translateX(100%);
+    transition:transform .4s ease, visibility 0s .4s;
   }
-  #garden-overlay.visible { transform: translateX(0); }
+  #garden-overlay.visible {
+    visibility:visible; transform:translateX(0); transition-delay:0s;
+  }
   #garden-header {
-    display:flex; align-items:center; padding:16px 18px 10px;
-    flex-shrink:0;
+    position:relative; display:grid; place-items:center;
+    min-height:50px; margin:6px 16px 0; flex-shrink:0;
   }
   #garden-back-btn {
-    background:none; border:none; font-size:22px; color:#6a7a6a;
-    padding:6px 10px; margin-right:8px;
+    position:absolute; left:0; width:44px; height:44px; border-radius:50%;
+    color:#694968; background:#fff8f4; border:1px solid #dcbdd3;
+    font:22px/1 Georgia,serif; cursor:pointer;
   }
-  #garden-title { font-size:17px; color:#5a6a5a; font-weight:600; }
-  #garden-tree-name { text-align:center; font-size:15px; color:#7a6a4a; margin-bottom:2px; }
-  #garden-tree-jp { text-align:center; font-size:12px; color:#a89a7a; margin-bottom:12px; font-style:italic; }
+  #garden-title {
+    color:#725276; font-size:11px; font-weight:700;
+    letter-spacing:.25em; text-transform:uppercase;
+  }
+  #garden-tree-name {
+    text-align:center; font:normal clamp(26px,8vw,39px)/1.06 "Palatino Linotype",Georgia,serif;
+    padding:1px 12px 0;
+  }
+  #garden-tree-jp {
+    text-align:center; color:#765575; font:italic 15px Georgia,serif;
+    margin:4px 0 11px;
+  }
   #garden-canvas-wrap {
-    flex:1; display:flex; align-items:center; justify-content:center;
-    min-height:0;
+    flex:1; min-height:0; position:relative; overflow:hidden;
+    margin:0 13px; border-radius:24px; border:1px solid #d5b2cc;
+    box-shadow:0 6px 16px #754d731a;
   }
   #garden-canvas { width:100%; height:100%; }
-  #garden-progress-wrap {
-    padding: 0 24px 6px; flex-shrink:0;
-  }
+  #garden-progress-wrap { margin:13px 29px 0; flex-shrink:0; }
   #garden-progress-bar {
-    height:10px; background:rgba(155,184,155,0.25); border-radius:10px; overflow:hidden;
+    height:7px; border-radius:10px; overflow:hidden;
+    background:#dec9e0; box-shadow:inset 0 1px 2px #6949681f;
   }
   #garden-progress-fill {
-    height:100%; background:linear-gradient(90deg,#a8c9a8,#7fae7f);
-    border-radius:10px; transition: width 0.5s ease;
+    height:100%; background:linear-gradient(90deg,#ad72a2,#d878a4,#f3ab9f);
+    border-radius:10px; transition:width .35s ease;
   }
-  #garden-progress-label { text-align:center; font-size:12px; color:#8a9a8a; margin-top:6px; }
+  #garden-progress-label {
+    text-align:center; font-size:11px; letter-spacing:.07em;
+    color:#6c4d6f; margin-top:6px;
+  }
+  #garden-replay-sprout {
+    position:absolute; left:50%; bottom:10px; transform:translateX(-50%);
+    min-height:44px; padding:0 16px; border:1px solid #dec2d5;
+    border-radius:24px; background:#fff8f4; color:#694968;
+    font:600 13px sans-serif; white-space:nowrap; cursor:pointer;
+  }
+  #garden-replay-sprout:focus-visible { outline:2px solid #805781; outline-offset:3px; }
   #garden-species-row {
-    display:flex; gap:10px; padding:14px 18px 22px; overflow-x:auto;
+    display:flex; justify-content:space-between; gap:4px;
+    padding:9px 13px max(12px,env(safe-area-inset-bottom));
     flex-shrink:0;
   }
   .garden-species-chip {
-    flex-shrink:0; width:54px; height:54px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-size:22px; border:2px solid transparent; background:rgba(255,255,255,0.6);
-    position:relative;
+    width:clamp(27px,12vw,50px); flex:0 1 50px; min-width:0; aspect-ratio:1;
+    border-radius:50%; border:1px solid #d7bfd8; position:relative;
+    background:#fff5f5; cursor:pointer;
   }
-  .garden-species-chip.active { border-color:#7fae7f; background:white; }
-  .garden-species-chip.locked { opacity:0.4; }
-  .garden-species-chip.complete::after {
-    content:"✓"; position:absolute; top:-4px; right:-4px;
-    background:#7fae7f; color:white; font-size:10px; width:16px; height:16px;
-    border-radius:50%; display:flex; align-items:center; justify-content:center;
+  .garden-species-chip canvas { border-radius:50%; }
+  .garden-species-chip[aria-pressed="true"] {
+    border-color:#a76699; background:#fff8ef; box-shadow:0 0 0 2px #edc5dc;
+  }
+  .garden-species-chip.locked:not([aria-pressed="true"]) { background:#efe6f1; }
+  .garden-species-chip.locked:not([aria-pressed="true"]) canvas { opacity:.72; }
+  .garden-species-chip.locked::after, .garden-species-chip.complete::after {
+    position:absolute; right:-1px; bottom:-1px; display:grid; place-items:center;
+    width:14px; height:14px; border-radius:50%; background:#765779;
+    color:#fff; font-size:9px;
+  }
+  .garden-species-chip.locked::after { content:"🔒"; }
+  .garden-species-chip.complete::after { content:"✓"; background:#537b6d; }
+  #garden-back-btn:focus-visible, .garden-species-chip:focus-visible {
+    outline:2px solid #805781; outline-offset:3px;
+  }
+  @media (max-height:460px) {
+    #garden-header { margin-top:1px; min-height:45px; }
+    #garden-tree-name { font-size:24px; }
+    #garden-tree-jp { margin-bottom:6px; }
+    #garden-progress-wrap { margin-top:7px; }
+    #garden-species-row { justify-content:center; gap:7px; padding-block:5px 7px; }
+    .garden-species-chip { flex-basis:34px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    #garden-overlay, #garden-overlay.visible, #garden-progress-fill { transition:none; }
   }
   #start-overlay {
     position:absolute; top:0; left:0; width:100%; height:100%;
@@ -260,18 +302,22 @@
     <div id="start-hint">Tape les bulles douces.<br>Glisse sur les bulles dorées.</div>
   </div>
 
+  <img id="garden-tree-atlas" src="assets/bonsais.webp" alt="" hidden>
+  <img id="garden-landscapes-1" src="assets/jardins-1.webp" alt="" hidden>
+  <img id="garden-landscapes-2" src="assets/jardins-2.webp" alt="" hidden>
   <div id="garden-overlay">
     <div id="garden-header">
-      <button id="garden-back-btn">←</button>
+      <button id="garden-back-btn" aria-label="Retour au jeu">←</button>
       <div id="garden-title">Mon Jardin</div>
     </div>
-    <div id="garden-tree-name">Érable sacré</div>
+    <h2 id="garden-tree-name">Érable sacré</h2>
     <div id="garden-tree-jp">Momiji</div>
     <div id="garden-canvas-wrap">
-      <canvas id="garden-canvas"></canvas>
+      <canvas id="garden-canvas" role="img" aria-labelledby="garden-tree-name garden-tree-jp"></canvas>
+      <button id="garden-replay-sprout" type="button" hidden>Revoir la pousse</button>
     </div>
     <div id="garden-progress-wrap">
-      <div id="garden-progress-bar"><div id="garden-progress-fill"></div></div>
+      <div id="garden-progress-bar" role="progressbar" aria-label="Croissance du bonsaï" aria-valuemin="0"><div id="garden-progress-fill"></div></div>
       <div id="garden-progress-label">Niveau 0 / 888</div>
     </div>
     <div id="garden-species-row"></div>
@@ -349,6 +395,7 @@
 <script src="src/scroll.js"></script>
 <script src="src/bonsai.js"></script>
 <script src="src/progress.js"></script>
+<script src="src/garden-scene.js"></script>
 <script src="src/garden.js"></script>
 <script src="src/poptext.js"></script>
 <script src="src/calm.js"></script>

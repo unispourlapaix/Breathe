@@ -4,7 +4,11 @@
 const fs = require("fs");
 const path = require("path");
 
-const dev = fs.readFileSync("index.html", "utf8");
+const dev = fs.readFileSync("index.html", "utf8")
+  .replace(/src="(assets\/[a-z0-9-]+\.webp)"/g, (_, assetPath) => {
+    const encoded = fs.readFileSync(assetPath).toString("base64");
+    return `src="data:image/webp;base64,${encoded}"`;
+  });
 const tagRe = /<script src="(src\/[^"]+\.js)"><\/script>/g;
 
 const files = [...dev.matchAll(tagRe)].map(m => m[1]);
