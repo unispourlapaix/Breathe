@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Breathe 禅</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width:100%; height:100%; overflow:hidden;
+    background: #eef3ee;
+    font-family: -apple-system, 'Hiragino Sans', sans-serif;
+    touch-action: none;
+  }
+  #game-root {
+    position:relative; width:100%; height:100%;
+    max-width: 480px; margin: 0 auto;
+    overflow:hidden;
+  }
+  canvas { display:block; width:100%; height:100%; }
+
+  /* ---- UI Overlay (MOD-UI-001) ---- */
+  #ui-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:10;
+  }
+  #score-display {
+    position:absolute; top:14px; left:14px;
+    font-size:20px; font-weight:600; color:#3d4a3d; line-height:1;
+    padding:8px 16px; border-radius:18px;
+    background: rgba(255,255,255,0.58);
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.14);
+    border: 1px solid rgba(255,255,255,0.45);
+  }
+  #timer-bar-wrap { display:none; } /* remplacé par le cœur dessiné sur canvas */
+  #combo-display {
+    position:absolute; top:58px; left:14px;
+    font-size:13px; font-weight:600; color:#7a5a2a; line-height:1;
+    padding:5px 12px; border-radius:14px;
+    background: rgba(255,244,214,0.62);
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    opacity:0; transition: opacity 0.3s;
+  }
+  #combo-display.show { opacity:1; }
+
+  /* ---- Carte fin de partie (MOD-CARD-001) ---- */
+  /* ---- Bouton rejouer flottant (le parchemin est dessiné en canvas) ---- */
+  #end-replay-wrap {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    z-index:20; pointer-events:none;
+  }
+  #end-card-replay {
+    position:absolute;
+    background:#8a7245; color:#f2e6c8; border:none; border-radius:4px;
+    padding:11px 30px; font-size:14px; font-weight:600; letter-spacing:1px;
+    box-shadow:0 6px 16px rgba(138,114,69,0.4);
+    opacity:0; transition: opacity 0.4s ease;
+    pointer-events:none;
+  }
+  #end-card-replay.visible { opacity:1; pointer-events:all; }
+
+  /* ---- Mode Méditation (MOD-MEDITATION-001) ---- */
+  #meditation-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: linear-gradient(180deg,#e8f0ec,#f4f1e8 75%);
+    z-index:45; display:flex; flex-direction:column;
+    transform: translateX(100%);
+    transition: transform 0.4s ease;
+  }
+  #meditation-overlay.visible { transform: translateX(0); }
+  #meditation-header {
+    display:flex; align-items:center; padding:16px 18px 10px; flex-shrink:0;
+  }
+  #meditation-back-btn {
+    background:none; border:none; font-size:22px; color:#6a7a6a;
+    padding:6px 10px; margin-right:8px;
+  }
+  #meditation-title { font-size:17px; color:#5a6a5a; font-weight:600; }
+
+  #meditation-menu {
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:0 28px; gap:18px;
+  }
+  .meditation-choice-card {
+    width:100%; max-width:320px; background:white; border-radius:18px;
+    padding:22px 20px; text-align:left;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06); border:none;
+  }
+  .meditation-choice-icon { font-size:26px; margin-bottom:8px; }
+  .meditation-choice-title { font-size:16px; font-weight:600; color:#4a5a4a; margin-bottom:4px; }
+  .meditation-choice-desc { font-size:13px; color:#8a9a8a; line-height:1.5; }
+
+  #meditation-exercise-view {
+    flex:1; display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:0 24px;
+  }
+  #meditation-exercise-view.visible { display:flex; }
+
+  #med-breath-message { color:#5a6a5a; font-size:14px; text-align:center; margin-bottom:30px; line-height:1.6; }
+
+  #med-scan-progress { font-size:12px; color:#a89a7a; margin-bottom:10px; }
+  #med-scan-zone { font-size:19px; font-weight:600; color:#4a5a4a; text-align:center; margin-bottom:10px; }
+  #med-scan-instruction { font-size:14px; color:#7a8a7a; text-align:center; line-height:1.6; margin-bottom:22px; max-width:300px; }
+  #med-scan-phase-badge {
+    display:inline-block; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:600;
+    margin-bottom:20px;
+  }
+  #med-scan-phase-badge.hold { background:#f3d8a8; color:#8a6a30; }
+  #med-scan-phase-badge.release { background:#bcd9c8; color:#3a6a4a; }
+  #med-scan-seconds { font-size:32px; font-weight:300; color:#5a6a5a; margin-bottom:24px; }
+  #med-scan-skip { background:none; border:1px solid #cdd8cd; color:#8a9a8a; border-radius:20px; padding:8px 20px; font-size:13px; }
+  #med-scan-finished { display:none; text-align:center; }
+  #med-scan-finished.visible { display:block; }
+  #med-scan-finished-title { font-size:18px; color:#4a5a4a; margin-bottom:8px; }
+  #med-scan-finished-text { font-size:13px; color:#8a9a8a; margin-bottom:22px; line-height:1.6; }
+
+  /* ---- Overlay de respiration apaisante (MOD-CALM-001) ---- */
+  #calm-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: rgba(20, 30, 35, 0.78);
+    backdrop-filter: blur(2px);
+    z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition: opacity 0.6s ease;
+  }
+  #calm-overlay.visible { opacity:1; pointer-events:all; }
+  #calm-message {
+    color:#eef3ee; font-size:15px; text-align:center; margin-bottom:36px;
+    padding:0 40px; line-height:1.6; opacity:0.9;
+  }
+  #calm-circle-wrap {
+    width:160px; height:160px; display:flex; align-items:center; justify-content:center;
+    position:relative; margin-bottom:30px;
+  }
+  #calm-circle-outer {
+    position:absolute; width:160px; height:160px; border-radius:50%;
+    border: 1.5px solid rgba(255,255,255,0.25);
+  }
+  #calm-circle {
+    width:90px; height:90px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, rgba(180,210,200,0.9), rgba(120,160,150,0.7));
+    box-shadow: 0 0 40px rgba(180,210,200,0.4);
+    transition: transform 0.1s linear;
+  }
+  #calm-phase-label {
+    color:#fff; font-size:20px; font-weight:600; margin-bottom:6px;
+  }
+  #calm-phase-seconds {
+    color:rgba(255,255,255,0.7); font-size:14px; margin-bottom:28px;
+  }
+  #calm-resume-btn {
+    background: rgba(255,255,255,0.15); color:#fff; border: 1px solid rgba(255,255,255,0.3);
+    border-radius:30px; padding:11px 32px; font-size:14px;
+    opacity:0; transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  #calm-resume-btn.ready { opacity:1; pointer-events:all; }
+  #calm-cycles-label {
+    color:rgba(255,255,255,0.5); font-size:12px; margin-top:14px;
+  }
+
+  /* ---- Écran Jardin (MOD-GARDEN-001) ---- */
+  #garden-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: linear-gradient(180deg,#e4ecdf,#f2efe4 70%);
+    z-index:40; display:flex; flex-direction:column;
+    transform: translateX(100%);
+    transition: transform 0.4s ease;
+  }
+  #garden-overlay.visible { transform: translateX(0); }
+  #garden-header {
+    display:flex; align-items:center; padding:16px 18px 10px;
+    flex-shrink:0;
+  }
+  #garden-back-btn {
+    background:none; border:none; font-size:22px; color:#6a7a6a;
+    padding:6px 10px; margin-right:8px;
+  }
+  #garden-title { font-size:17px; color:#5a6a5a; font-weight:600; }
+  #garden-tree-name { text-align:center; font-size:15px; color:#7a6a4a; margin-bottom:2px; }
+  #garden-tree-jp { text-align:center; font-size:12px; color:#a89a7a; margin-bottom:12px; font-style:italic; }
+  #garden-canvas-wrap {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    min-height:0;
+  }
+  #garden-canvas { width:100%; height:100%; }
+  #garden-progress-wrap {
+    padding: 0 24px 6px; flex-shrink:0;
+  }
+  #garden-progress-bar {
+    height:10px; background:rgba(155,184,155,0.25); border-radius:10px; overflow:hidden;
+  }
+  #garden-progress-fill {
+    height:100%; background:linear-gradient(90deg,#a8c9a8,#7fae7f);
+    border-radius:10px; transition: width 0.5s ease;
+  }
+  #garden-progress-label { text-align:center; font-size:12px; color:#8a9a8a; margin-top:6px; }
+  #garden-species-row {
+    display:flex; gap:10px; padding:14px 18px 22px; overflow-x:auto;
+    flex-shrink:0;
+  }
+  .garden-species-chip {
+    flex-shrink:0; width:54px; height:54px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; border:2px solid transparent; background:rgba(255,255,255,0.6);
+    position:relative;
+  }
+  .garden-species-chip.active { border-color:#7fae7f; background:white; }
+  .garden-species-chip.locked { opacity:0.4; }
+  .garden-species-chip.complete::after {
+    content:"✓"; position:absolute; top:-4px; right:-4px;
+    background:#7fae7f; color:white; font-size:10px; width:16px; height:16px;
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+  }
+  #start-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: linear-gradient(180deg,#dceadd,#eef3ee 60%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:30; transition: opacity 0.5s ease;
+  }
+  #start-overlay.hidden { opacity:0; pointer-events:none; }
+  #start-title { font-size:32px; color:#5a6a5a; margin-bottom:6px; letter-spacing:1px; }
+  #start-sub { font-size:14px; color:#8a9a8a; margin-bottom:36px; }
+  #start-play {
+    background:#9bb89b; color:white; border:none; border-radius:30px;
+    padding:16px 48px; font-size:17px; font-weight:600;
+    box-shadow:0 8px 20px rgba(155,184,155,0.4);
+    margin-bottom:14px;
+  }
+  #start-garden-btn {
+    background:transparent; color:#6a8a6a; border:2px solid #9bb89b; border-radius:30px;
+    padding:12px 40px; font-size:15px; font-weight:600;
+    margin-bottom:10px;
+  }
+  #start-meditation-btn {
+    background:transparent; color:#8a7a9a; border:2px solid #b8a8d0; border-radius:30px;
+    padding:12px 40px; font-size:15px; font-weight:600;
+  }
+  #start-hint { margin-top:24px; font-size:12px; color:#a0a0a0; text-align:center; padding:0 40px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div id="game-root">
+  <canvas id="game-canvas"></canvas>
+
+  <div id="ui-overlay">
+    <div id="score-display">0</div>
+    <div id="combo-display">Combo x2</div>
+  </div>
+
+  <div id="start-overlay">
+    <div id="start-title">禅 Breathe</div>
+    <div id="start-sub">Respire. Éclate. Récolte la sagesse.</div>
+    <button id="start-play">Commencer</button>
+    <button id="start-garden-btn">🌳 Mon Jardin</button>
+    <button id="start-meditation-btn">🧘 Mode Méditation</button>
+    <div id="start-hint">Tape les bulles douces.<br>Glisse sur les bulles dorées.</div>
+  </div>
+
+  <div id="garden-overlay">
+    <div id="garden-header">
+      <button id="garden-back-btn">←</button>
+      <div id="garden-title">Mon Jardin</div>
+    </div>
+    <div id="garden-tree-name">Érable sacré</div>
+    <div id="garden-tree-jp">Momiji</div>
+    <div id="garden-canvas-wrap">
+      <canvas id="garden-canvas"></canvas>
+    </div>
+    <div id="garden-progress-wrap">
+      <div id="garden-progress-bar"><div id="garden-progress-fill"></div></div>
+      <div id="garden-progress-label">Niveau 0 / 888</div>
+    </div>
+    <div id="garden-species-row"></div>
+  </div>
+
+  <div id="end-replay-wrap">
+    <button id="end-card-replay">Rejouer</button>
+  </div>
+
+  <div id="meditation-overlay">
+    <div id="meditation-header">
+      <button id="meditation-back-btn">←</button>
+      <div id="meditation-title">Mode Méditation</div>
+    </div>
+
+    <div id="meditation-menu">
+      <button class="meditation-choice-card" id="med-choice-breathing">
+        <div class="meditation-choice-icon">🌬️</div>
+        <div class="meditation-choice-title">Respiration guidée</div>
+        <div class="meditation-choice-desc">Suis le cercle qui grossit et rétrécit. Inspire, retiens, expire — à ton rythme, sans limite de temps.</div>
+      </button>
+      <button class="meditation-choice-card" id="med-choice-bodyscan">
+        <div class="meditation-choice-icon">🌙</div>
+        <div class="meditation-choice-title">Détente avant de dormir</div>
+        <div class="meditation-choice-desc">Relaxation musculaire progressive. On détend chaque muscle, du crâne jusqu'aux orteils, pour préparer un sommeil paisible.</div>
+      </button>
+    </div>
+
+    <div id="meditation-exercise-view">
+      <div id="med-breath-container" style="display:none; flex-direction:column; align-items:center;">
+        <div id="med-breath-message">Respire à ton rythme.<br>Aucune limite de temps, arrête-toi quand tu veux.</div>
+        <div id="calm-circle-wrap-med" style="width:160px;height:160px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:20px;">
+          <div style="position:absolute;width:160px;height:160px;border-radius:50%;border:1.5px solid rgba(120,140,120,0.25);"></div>
+          <div id="med-breath-circle" style="width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 35% 30%, rgba(160,195,180,0.9), rgba(110,150,135,0.7));box-shadow:0 0 30px rgba(160,195,180,0.4);transition:transform 0.1s linear;"></div>
+        </div>
+        <div id="med-breath-phase-label" style="font-size:20px;font-weight:600;color:#4a5a4a;margin-bottom:6px;">Inspire</div>
+        <div id="med-breath-phase-seconds" style="font-size:14px;color:#8a9a8a;">4</div>
+      </div>
+
+      <div id="med-scan-container" style="display:none; flex-direction:column; align-items:center;">
+        <div id="med-scan-progress">Étape 1 / 15</div>
+        <div id="med-scan-zone">Le crâne et le cuir chevelu</div>
+        <div id="med-scan-instruction">Fronce doucement le cuir chevelu.</div>
+        <div id="med-scan-phase-badge" class="hold">Contracte</div>
+        <div id="med-scan-seconds">5</div>
+        <button id="med-scan-skip">Passer à l'étape suivante</button>
+
+        <div id="med-scan-finished">
+          <div id="med-scan-finished-title">Tout ton corps est détendu</div>
+          <div id="med-scan-finished-text">Reste ainsi aussi longtemps que tu le souhaites.<br>Bonne nuit, ou bon retour à ta journée.</div>
+          <button id="med-scan-restart" style="background:#9bb89b;color:white;border:none;border-radius:30px;padding:11px 28px;font-size:14px;">Refaire la séance</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="calm-overlay">
+    <div id="calm-message">Tu sembles aller un peu vite.<br>Prenons un instant pour respirer ensemble.</div>
+    <div id="calm-circle-wrap">
+      <div id="calm-circle-outer"></div>
+      <div id="calm-circle"></div>
+    </div>
+    <div id="calm-phase-label">Inspire</div>
+    <div id="calm-phase-seconds">4</div>
+    <button id="calm-resume-btn">Reprendre le jeu</button>
+    <div id="calm-cycles-label"></div>
+  </div>
+</div>
+
+<script src="src/quotes.js"></script>
+<script src="src/theme_moonlit.js"></script>
+<script src="src/scenery.js"></script>
+<script src="src/bubbles.js"></script>
+<script src="src/heart.js"></script>
+<script src="src/scroll.js"></script>
+<script src="src/bonsai.js"></script>
+<script src="src/progress.js"></script>
+<script src="src/garden.js"></script>
+<script src="src/poptext.js"></script>
+<script src="src/calm.js"></script>
+<script src="src/meditation.js"></script>
+<script src="src/game.js"></script>
+</body>
+</html>

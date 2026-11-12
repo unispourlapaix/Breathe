@@ -1,0 +1,3553 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Breathe 禅</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width:100%; height:100%; overflow:hidden;
+    background: #eef3ee;
+    font-family: -apple-system, 'Hiragino Sans', sans-serif;
+    touch-action: none;
+  }
+  #game-root {
+    position:relative; width:100%; height:100%;
+    max-width: 480px; margin: 0 auto;
+    overflow:hidden;
+  }
+  canvas { display:block; width:100%; height:100%; }
+
+  /* ---- UI Overlay (MOD-UI-001) ---- */
+  #ui-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:10;
+  }
+  #score-display {
+    position:absolute; top:14px; left:14px;
+    font-size:20px; font-weight:600; color:#3d4a3d; line-height:1;
+    padding:8px 16px; border-radius:18px;
+    background: rgba(255,255,255,0.58);
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.14);
+    border: 1px solid rgba(255,255,255,0.45);
+  }
+  #timer-bar-wrap { display:none; } /* remplacé par le cœur dessiné sur canvas */
+  #combo-display {
+    position:absolute; top:58px; left:14px;
+    font-size:13px; font-weight:600; color:#7a5a2a; line-height:1;
+    padding:5px 12px; border-radius:14px;
+    background: rgba(255,244,214,0.62);
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    opacity:0; transition: opacity 0.3s;
+  }
+  #combo-display.show { opacity:1; }
+
+  /* ---- Carte fin de partie (MOD-CARD-001) ---- */
+  /* ---- Bouton rejouer flottant (le parchemin est dessiné en canvas) ---- */
+  #end-replay-wrap {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    z-index:20; pointer-events:none;
+  }
+  #end-card-replay {
+    position:absolute;
+    background:#8a7245; color:#f2e6c8; border:none; border-radius:4px;
+    padding:11px 30px; font-size:14px; font-weight:600; letter-spacing:1px;
+    box-shadow:0 6px 16px rgba(138,114,69,0.4);
+    opacity:0; transition: opacity 0.4s ease;
+    pointer-events:none;
+  }
+  #end-card-replay.visible { opacity:1; pointer-events:all; }
+
+  /* ---- Mode Méditation (MOD-MEDITATION-001) ---- */
+  #meditation-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: linear-gradient(180deg,#e8f0ec,#f4f1e8 75%);
+    z-index:45; display:flex; flex-direction:column;
+    transform: translateX(100%);
+    transition: transform 0.4s ease;
+  }
+  #meditation-overlay.visible { transform: translateX(0); }
+  #meditation-header {
+    display:flex; align-items:center; padding:16px 18px 10px; flex-shrink:0;
+  }
+  #meditation-back-btn {
+    background:none; border:none; font-size:22px; color:#6a7a6a;
+    padding:6px 10px; margin-right:8px;
+  }
+  #meditation-title { font-size:17px; color:#5a6a5a; font-weight:600; }
+
+  #meditation-menu {
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:0 28px; gap:18px;
+  }
+  .meditation-choice-card {
+    width:100%; max-width:320px; background:white; border-radius:18px;
+    padding:22px 20px; text-align:left;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06); border:none;
+  }
+  .meditation-choice-icon { font-size:26px; margin-bottom:8px; }
+  .meditation-choice-title { font-size:16px; font-weight:600; color:#4a5a4a; margin-bottom:4px; }
+  .meditation-choice-desc { font-size:13px; color:#8a9a8a; line-height:1.5; }
+
+  #meditation-exercise-view {
+    flex:1; display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:0 24px;
+  }
+  #meditation-exercise-view.visible { display:flex; }
+
+  #med-breath-message { color:#5a6a5a; font-size:14px; text-align:center; margin-bottom:30px; line-height:1.6; }
+
+  #med-scan-progress { font-size:12px; color:#a89a7a; margin-bottom:10px; }
+  #med-scan-zone { font-size:19px; font-weight:600; color:#4a5a4a; text-align:center; margin-bottom:10px; }
+  #med-scan-instruction { font-size:14px; color:#7a8a7a; text-align:center; line-height:1.6; margin-bottom:22px; max-width:300px; }
+  #med-scan-phase-badge {
+    display:inline-block; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:600;
+    margin-bottom:20px;
+  }
+  #med-scan-phase-badge.hold { background:#f3d8a8; color:#8a6a30; }
+  #med-scan-phase-badge.release { background:#bcd9c8; color:#3a6a4a; }
+  #med-scan-seconds { font-size:32px; font-weight:300; color:#5a6a5a; margin-bottom:24px; }
+  #med-scan-skip { background:none; border:1px solid #cdd8cd; color:#8a9a8a; border-radius:20px; padding:8px 20px; font-size:13px; }
+  #med-scan-finished { display:none; text-align:center; }
+  #med-scan-finished.visible { display:block; }
+  #med-scan-finished-title { font-size:18px; color:#4a5a4a; margin-bottom:8px; }
+  #med-scan-finished-text { font-size:13px; color:#8a9a8a; margin-bottom:22px; line-height:1.6; }
+
+  /* ---- Overlay de respiration apaisante (MOD-CALM-001) ---- */
+  #calm-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: rgba(20, 30, 35, 0.78);
+    backdrop-filter: blur(2px);
+    z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition: opacity 0.6s ease;
+  }
+  #calm-overlay.visible { opacity:1; pointer-events:all; }
+  #calm-message {
+    color:#eef3ee; font-size:15px; text-align:center; margin-bottom:36px;
+    padding:0 40px; line-height:1.6; opacity:0.9;
+  }
+  #calm-circle-wrap {
+    width:160px; height:160px; display:flex; align-items:center; justify-content:center;
+    position:relative; margin-bottom:30px;
+  }
+  #calm-circle-outer {
+    position:absolute; width:160px; height:160px; border-radius:50%;
+    border: 1.5px solid rgba(255,255,255,0.25);
+  }
+  #calm-circle {
+    width:90px; height:90px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, rgba(180,210,200,0.9), rgba(120,160,150,0.7));
+    box-shadow: 0 0 40px rgba(180,210,200,0.4);
+    transition: transform 0.1s linear;
+  }
+  #calm-phase-label {
+    color:#fff; font-size:20px; font-weight:600; margin-bottom:6px;
+  }
+  #calm-phase-seconds {
+    color:rgba(255,255,255,0.7); font-size:14px; margin-bottom:28px;
+  }
+  #calm-resume-btn {
+    background: rgba(255,255,255,0.15); color:#fff; border: 1px solid rgba(255,255,255,0.3);
+    border-radius:30px; padding:11px 32px; font-size:14px;
+    opacity:0; transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  #calm-resume-btn.ready { opacity:1; pointer-events:all; }
+  #calm-cycles-label {
+    color:rgba(255,255,255,0.5); font-size:12px; margin-top:14px;
+  }
+
+  /* ---- Écran Jardin (MOD-GARDEN-001) ---- */
+  #garden-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: linear-gradient(180deg,#e4ecdf,#f2efe4 70%);
+    z-index:40; display:flex; flex-direction:column;
+    transform: translateX(100%);
+    transition: transform 0.4s ease;
+  }
+  #garden-overlay.visible { transform: translateX(0); }
+  #garden-header {
+    display:flex; align-items:center; padding:16px 18px 10px;
+    flex-shrink:0;
+  }
+  #garden-back-btn {
+    background:none; border:none; font-size:22px; color:#6a7a6a;
+    padding:6px 10px; margin-right:8px;
+  }
+  #garden-title { font-size:17px; color:#5a6a5a; font-weight:600; }
+  #garden-tree-name { text-align:center; font-size:15px; color:#7a6a4a; margin-bottom:2px; }
+  #garden-tree-jp { text-align:center; font-size:12px; color:#a89a7a; margin-bottom:12px; font-style:italic; }
+  #garden-canvas-wrap {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    min-height:0;
+  }
+  #garden-canvas { width:100%; height:100%; }
+  #garden-progress-wrap {
+    padding: 0 24px 6px; flex-shrink:0;
+  }
+  #garden-progress-bar {
+    height:10px; background:rgba(155,184,155,0.25); border-radius:10px; overflow:hidden;
+  }
+  #garden-progress-fill {
+    height:100%; background:linear-gradient(90deg,#a8c9a8,#7fae7f);
+    border-radius:10px; transition: width 0.5s ease;
+  }
+  #garden-progress-label { text-align:center; font-size:12px; color:#8a9a8a; margin-top:6px; }
+  #garden-species-row {
+    display:flex; gap:10px; padding:14px 18px 22px; overflow-x:auto;
+    flex-shrink:0;
+  }
+  .garden-species-chip {
+    flex-shrink:0; width:54px; height:54px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; border:2px solid transparent; background:rgba(255,255,255,0.6);
+    position:relative;
+  }
+  .garden-species-chip.active { border-color:#7fae7f; background:white; }
+  .garden-species-chip.locked { opacity:0.4; }
+  .garden-species-chip.complete::after {
+    content:"✓"; position:absolute; top:-4px; right:-4px;
+    background:#7fae7f; color:white; font-size:10px; width:16px; height:16px;
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+  }
+  #start-overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background: linear-gradient(180deg,#dceadd,#eef3ee 60%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:30; transition: opacity 0.5s ease;
+  }
+  #start-overlay.hidden { opacity:0; pointer-events:none; }
+  #start-title { font-size:32px; color:#5a6a5a; margin-bottom:6px; letter-spacing:1px; }
+  #start-sub { font-size:14px; color:#8a9a8a; margin-bottom:36px; }
+  #start-play {
+    background:#9bb89b; color:white; border:none; border-radius:30px;
+    padding:16px 48px; font-size:17px; font-weight:600;
+    box-shadow:0 8px 20px rgba(155,184,155,0.4);
+    margin-bottom:14px;
+  }
+  #start-garden-btn {
+    background:transparent; color:#6a8a6a; border:2px solid #9bb89b; border-radius:30px;
+    padding:12px 40px; font-size:15px; font-weight:600;
+    margin-bottom:10px;
+  }
+  #start-meditation-btn {
+    background:transparent; color:#8a7a9a; border:2px solid #b8a8d0; border-radius:30px;
+    padding:12px 40px; font-size:15px; font-weight:600;
+  }
+  #start-hint { margin-top:24px; font-size:12px; color:#a0a0a0; text-align:center; padding:0 40px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div id="game-root">
+  <canvas id="game-canvas"></canvas>
+
+  <div id="ui-overlay">
+    <div id="score-display">0</div>
+    <div id="combo-display">Combo x2</div>
+  </div>
+
+  <div id="start-overlay">
+    <div id="start-title">禅 Breathe</div>
+    <div id="start-sub">Respire. Éclate. Récolte la sagesse.</div>
+    <button id="start-play">Commencer</button>
+    <button id="start-garden-btn">🌳 Mon Jardin</button>
+    <button id="start-meditation-btn">🧘 Mode Méditation</button>
+    <div id="start-hint">Tape les bulles douces.<br>Glisse sur les bulles dorées.</div>
+  </div>
+
+  <div id="garden-overlay">
+    <div id="garden-header">
+      <button id="garden-back-btn">←</button>
+      <div id="garden-title">Mon Jardin</div>
+    </div>
+    <div id="garden-tree-name">Érable sacré</div>
+    <div id="garden-tree-jp">Momiji</div>
+    <div id="garden-canvas-wrap">
+      <canvas id="garden-canvas"></canvas>
+    </div>
+    <div id="garden-progress-wrap">
+      <div id="garden-progress-bar"><div id="garden-progress-fill"></div></div>
+      <div id="garden-progress-label">Niveau 0 / 888</div>
+    </div>
+    <div id="garden-species-row"></div>
+  </div>
+
+  <div id="end-replay-wrap">
+    <button id="end-card-replay">Rejouer</button>
+  </div>
+
+  <div id="meditation-overlay">
+    <div id="meditation-header">
+      <button id="meditation-back-btn">←</button>
+      <div id="meditation-title">Mode Méditation</div>
+    </div>
+
+    <div id="meditation-menu">
+      <button class="meditation-choice-card" id="med-choice-breathing">
+        <div class="meditation-choice-icon">🌬️</div>
+        <div class="meditation-choice-title">Respiration guidée</div>
+        <div class="meditation-choice-desc">Suis le cercle qui grossit et rétrécit. Inspire, retiens, expire — à ton rythme, sans limite de temps.</div>
+      </button>
+      <button class="meditation-choice-card" id="med-choice-bodyscan">
+        <div class="meditation-choice-icon">🌙</div>
+        <div class="meditation-choice-title">Détente avant de dormir</div>
+        <div class="meditation-choice-desc">Relaxation musculaire progressive. On détend chaque muscle, du crâne jusqu'aux orteils, pour préparer un sommeil paisible.</div>
+      </button>
+    </div>
+
+    <div id="meditation-exercise-view">
+      <div id="med-breath-container" style="display:none; flex-direction:column; align-items:center;">
+        <div id="med-breath-message">Respire à ton rythme.<br>Aucune limite de temps, arrête-toi quand tu veux.</div>
+        <div id="calm-circle-wrap-med" style="width:160px;height:160px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:20px;">
+          <div style="position:absolute;width:160px;height:160px;border-radius:50%;border:1.5px solid rgba(120,140,120,0.25);"></div>
+          <div id="med-breath-circle" style="width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 35% 30%, rgba(160,195,180,0.9), rgba(110,150,135,0.7));box-shadow:0 0 30px rgba(160,195,180,0.4);transition:transform 0.1s linear;"></div>
+        </div>
+        <div id="med-breath-phase-label" style="font-size:20px;font-weight:600;color:#4a5a4a;margin-bottom:6px;">Inspire</div>
+        <div id="med-breath-phase-seconds" style="font-size:14px;color:#8a9a8a;">4</div>
+      </div>
+
+      <div id="med-scan-container" style="display:none; flex-direction:column; align-items:center;">
+        <div id="med-scan-progress">Étape 1 / 15</div>
+        <div id="med-scan-zone">Le crâne et le cuir chevelu</div>
+        <div id="med-scan-instruction">Fronce doucement le cuir chevelu.</div>
+        <div id="med-scan-phase-badge" class="hold">Contracte</div>
+        <div id="med-scan-seconds">5</div>
+        <button id="med-scan-skip">Passer à l'étape suivante</button>
+
+        <div id="med-scan-finished">
+          <div id="med-scan-finished-title">Tout ton corps est détendu</div>
+          <div id="med-scan-finished-text">Reste ainsi aussi longtemps que tu le souhaites.<br>Bonne nuit, ou bon retour à ta journée.</div>
+          <button id="med-scan-restart" style="background:#9bb89b;color:white;border:none;border-radius:30px;padding:11px 28px;font-size:14px;">Refaire la séance</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="calm-overlay">
+    <div id="calm-message">Tu sembles aller un peu vite.<br>Prenons un instant pour respirer ensemble.</div>
+    <div id="calm-circle-wrap">
+      <div id="calm-circle-outer"></div>
+      <div id="calm-circle"></div>
+    </div>
+    <div id="calm-phase-label">Inspire</div>
+    <div id="calm-phase-seconds">4</div>
+    <button id="calm-resume-btn">Reprendre le jeu</button>
+    <div id="calm-cycles-label"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================
+   MOD-QUOTES-001 : Banque de dictons et proverbes
+   Indépendant — peut être étendu sans toucher au reste du jeu
+   ============================================ */
+
+const QUOTE_BANK = [
+  { id: "Q001", text: "Patience et longueur de temps font plus que force ni que rage.", author: "proverbe" },
+  { id: "Q002", text: "La paix ne s'impose pas, elle se cultive comme un jardin.", author: "sagesse" },
+  { id: "Q003", text: "Un sourire ne coûte rien et illumine tout sur son passage.", author: "proverbe" },
+  { id: "Q004", text: "Celui qui plante un bambou n'en verra peut-être pas l'ombre, mais il aura planté.", author: "sagesse" },
+  { id: "Q005", text: "L'eau qui dort finit par croupir, l'eau qui coule reste pure.", author: "proverbe" },
+  { id: "Q006", text: "Un cœur reconnaissant trouve toujours une raison de chanter.", author: "sagesse" },
+  { id: "Q007", text: "Mieux vaut allumer une bougie que maudire l'obscurité.", author: "proverbe" },
+  { id: "Q008", text: "Le pardon est un cadeau qu'on s'offre à soi-même.", author: "sagesse" },
+  { id: "Q009", text: "Pourquoi le poisson rouge n'a jamais d'argent ? Parce qu'il vit dans son bocal !", author: "dicton rigolo" },
+  { id: "Q010", text: "Le bambou plie sous la tempête mais ne casse jamais, là est sa force.", author: "sagesse" },
+  { id: "Q011", text: "Qui se lève tôt voit le cerisier fleurir avant tout le monde.", author: "proverbe" },
+  { id: "Q012", text: "Pourquoi le moine ne ferme jamais sa porte ? Pour laisser entrer la paix !", author: "dicton rigolo" },
+  { id: "Q013", text: "La vraie richesse se mesure en gratitude, pas en pièces d'or.", author: "sagesse" },
+  { id: "Q014", text: "Petit pas après petit pas, on traverse la plus haute montagne.", author: "proverbe" },
+  { id: "Q015", text: "Un papillon ne compte pas les fleurs qu'il a visitées, il savoure chacune d'elles.", author: "sagesse" },
+  { id: "Q016", text: "Pourquoi le nuage est triste ? Parce qu'il a toujours la tête dans les vapeurs !", author: "dicton rigolo" },
+  { id: "Q017", text: "Celui qui sème la bonté récolte la paix.", author: "proverbe" },
+  { id: "Q018", text: "Le silence aussi est une réponse, et parfois la plus sage.", author: "sagesse" },
+  { id: "Q019", text: "La joie partagée vaut deux fois la joie gardée pour soi.", author: "proverbe" },
+  { id: "Q020", text: "Pourquoi le bonsaï ne grandit jamais vite ? Il prend le temps de bien s'enraciner !", author: "dicton rigolo" },
+  { id: "Q021", text: "Aimer son prochain, c'est déjà porter une part de sa charge.", author: "sagesse" },
+  { id: "Q022", text: "La pluie tombe sur le juste et l'injuste, mais l'arc-en-ciel appartient à tous.", author: "proverbe" },
+  { id: "Q023", text: "Un grain de riz à la fois, et la montagne de rizière se remplit.", author: "sagesse" },
+  { id: "Q024", text: "Pourquoi le sage ne court jamais ? Parce que la sagesse n'est pas une course !", author: "dicton rigolo" },
+  { id: "Q025", text: "Ce que tu donnes avec amour te revient toujours, sous une forme ou une autre.", author: "sagesse" },
+
+  /* ---- Ajouts : sagesse ---- */
+  { id: "Q026", text: "On ne voit pas grandir le bambou, mais un jour il touche le ciel.", author: "sagesse" },
+  { id: "Q027", text: "La racine profonde n'a pas peur du vent.", author: "proverbe" },
+  { id: "Q028", text: "Celui qui écoute vraiment entend ce qui n'est pas dit.", author: "sagesse" },
+  { id: "Q029", text: "Le vide entre deux notes fait toute la musique.", author: "sagesse" },
+  { id: "Q030", text: "On ne traverse jamais deux fois la même rivière, ni le même cœur.", author: "proverbe" },
+  { id: "Q031", text: "La lenteur n'est pas un retard quand on marche vers la paix.", author: "sagesse" },
+  { id: "Q032", text: "Un arbre courbé par le vent raconte une histoire que le vent a oubliée.", author: "sagesse" },
+  { id: "Q033", text: "La main qui donne ne s'appauvrit jamais du cœur.", author: "proverbe" },
+  { id: "Q034", text: "Ce qui est brisé peut être réparé avec de l'or, et devenir plus précieux encore.", author: "sagesse" },
+  { id: "Q035", text: "On reconnaît la force d'un homme à la douceur qu'il choisit malgré elle.", author: "sagesse" },
+
+  /* ---- Ajouts : dictons rigolos ---- */
+  { id: "Q036", text: "Pourquoi le samouraï n'est jamais en retard ? Il a le sens de l'honneur-aire !", author: "dicton rigolo" },
+  { id: "Q037", text: "Le zen, c'est facile : il suffit de ne penser à rien... en y pensant très fort.", author: "dicton rigolo" },
+  { id: "Q038", text: "Un bonsaï miniature reste un arbre à l'ego normal.", author: "dicton rigolo" },
+  { id: "Q039", text: "Pourquoi le thé vert ne se vexe jamais ? Il a l'habitude qu'on le laisse infuser.", author: "dicton rigolo" },
+  { id: "Q040", text: "La méditation, c'est gratuit, sauf le coussin ergonomique à 80 euros.", author: "dicton rigolo" },
+  { id: "Q041", text: "Pourquoi le koï ne stresse jamais ? Il tourne toujours en rond, mais avec classe.", author: "dicton rigolo" },
+  { id: "Q042", text: "Un vrai maître zen sait rester calme... tant que le wifi fonctionne.", author: "dicton rigolo" },
+  { id: "Q043", text: "Pourquoi le papillon ne se presse jamais ? Il sait que sa vie est déjà courte, alors autant la savourer lentement.", author: "dicton rigolo" },
+  { id: "Q044", text: "Le calme intérieur, ça se cultive. Comme les mauvaises herbes, mais à l'envers.", author: "dicton rigolo" },
+  { id: "Q045", text: "Pourquoi le caillou du jardin zen ne bouge jamais ? Il a trouvé sa vocation très tôt.", author: "dicton rigolo" },
+
+  /* ---- Ajouts : sarcastiques (gentiment piquants, jamais méchants) ---- */
+  { id: "Q046", text: "Respire profondément. Ça ne réglera pas le problème, mais au moins tu seras détendu en l'ignorant.", author: "sagesse à pincettes" },
+  { id: "Q047", text: "Le sage dit : lâche prise. Le compte en banque, lui, ne lâche jamais rien.", author: "sagesse à pincettes" },
+  { id: "Q048", text: "On t'a dit que la patience est une vertu. Personne n'a précisé qu'elle était aussi un sport extrême.", author: "sagesse à pincettes" },
+  { id: "Q049", text: "Vivre l'instant présent, c'est facile, sauf quand l'instant présent c'est une salle d'attente.", author: "sagesse à pincettes" },
+  { id: "Q050", text: "Le bonheur ne s'achète pas. Mais bon, un bon café aide quand même beaucoup.", author: "sagesse à pincettes" },
+  { id: "Q051", text: "La sagesse, c'est savoir qu'on ne sait rien. Ça tombe bien, ça simplifie les choses.", author: "sagesse à pincettes" },
+  { id: "Q052", text: "Médite chaque jour, disent-ils. Ils n'ont jamais essayé avec un voisin qui perce à 8h.", author: "sagesse à pincettes" },
+  { id: "Q053", text: "Accepte ce que tu ne peux pas changer. Genre la file d'attente à la poste.", author: "sagesse à pincettes" },
+  { id: "Q054", text: "Le chemin compte plus que la destination, sauf si tu es en retard.", author: "sagesse à pincettes" },
+  { id: "Q055", text: "Sois comme l'eau, disent les sages. L'eau, elle, n'a jamais eu à remplir de déclaration d'impôts.", author: "sagesse à pincettes" },
+];
+
+function getRandomQuote(excludeId) {
+  let pool = QUOTE_BANK;
+  if (excludeId) pool = QUOTE_BANK.filter(q => q.id !== excludeId);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+
+/* ============================================
+   MOD-THEME-MOONLIT-001 : Ambiance "Soir lunaire étoilé"
+   Associée à l'Érable sacré (Momiji)
+   Ciel nocturne dégradé, pleine lune avec halo, étoiles scintillantes,
+   silhouettes de branches en contre-jour, feuilles tombant éclairées par la lune
+   ============================================ */
+
+const ThemeMoonlit = (() => {
+
+  let W = 0, H = 0;
+  let stars = [];
+  let clouds = []; // nuages fins nocturnes, plus discrets que le thème jour
+  let leaves = []; // feuilles d'érable tombant, éclairées par la lune
+  let moonPulse = 0;
+
+  function init(width, height) {
+    W = width; H = height;
+    moonPulse = 0;
+
+    // Étoiles : réparties sur le ciel, quelques-unes plus brillantes (façon constellation)
+    stars = [];
+    const starCount = 55;
+    for (let i = 0; i < starCount; i++) {
+      const isBright = Math.random() < 0.15;
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.62, // les étoiles restent dans le tiers/moitié haute du ciel
+        size: isBright ? 1.6 + Math.random() * 1.2 : 0.6 + Math.random() * 0.7,
+        baseAlpha: isBright ? 0.85 : 0.4 + Math.random() * 0.3,
+        twinklePhase: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.015 + Math.random() * 0.02,
+        isBright
+      });
+    }
+
+    // Nuages nocturnes fins, très discrets, dérivant lentement devant les étoiles
+    clouds = [];
+    for (let i = 0; i < 3; i++) {
+      clouds.push({
+        x: Math.random() * W,
+        y: 20 + Math.random() * 100,
+        scale: 0.5 + Math.random() * 0.6,
+        speed: 0.05 + Math.random() * 0.06,
+        opacity: 0.08 + Math.random() * 0.07
+      });
+    }
+
+    // Feuilles d'érable tombantes, plus rares et plus lentes que les pétales du thème jour
+    leaves = [];
+    for (let i = 0; i < 9; i++) {
+      leaves.push(spawnLeaf(true));
+    }
+  }
+
+  function spawnLeaf(randomY) {
+    return {
+      x: Math.random() * W,
+      y: randomY ? Math.random() * H : -10,
+      size: 4 + Math.random() * 4,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.03,
+      fallSpeed: 0.22 + Math.random() * 0.35,
+      driftPhase: Math.random() * Math.PI * 2
+    };
+  }
+
+  function update(dt) {
+    moonPulse += dt * 0.0015;
+
+    for (const s of stars) {
+      s.twinklePhase += s.twinkleSpeed * dt;
+    }
+
+    for (const c of clouds) {
+      c.x += c.speed * dt;
+      if (c.x > W + 100) c.x = -100;
+    }
+
+    for (const l of leaves) {
+      l.y += l.fallSpeed * dt * 0.06;
+      l.driftPhase += 0.018 * dt;
+      l.x += Math.sin(l.driftPhase) * 0.12 * dt;
+      l.rotation += l.rotSpeed * dt;
+      if (l.y > H + 10) {
+        Object.assign(l, spawnLeaf(false));
+      }
+    }
+  }
+
+  function drawSky(ctx) {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, "#0d1530");
+    grad.addColorStop(0.45, "#1a2347");
+    grad.addColorStop(0.8, "#2c2f52");
+    grad.addColorStop(1, "#3a3458");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawMoon(ctx) {
+    const mx = W * 0.74, my = H * 0.2, r = Math.min(W, H) * 0.085;
+    const pulse = 0.92 + Math.sin(moonPulse) * 0.08;
+
+    // halo lumineux doux, plusieurs couches pour un dégradé progressif
+    ctx.save();
+    const halo = ctx.createRadialGradient(mx, my, r * 0.6, mx, my, r * 4.2 * pulse);
+    halo.addColorStop(0, "rgba(255,250,230,0.35)");
+    halo.addColorStop(0.4, "rgba(255,250,230,0.12)");
+    halo.addColorStop(1, "rgba(255,250,230,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(mx, my, r * 4.2 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // corps de la lune
+    ctx.save();
+    const moonGrad = ctx.createRadialGradient(mx - r * 0.3, my - r * 0.3, r * 0.1, mx, my, r);
+    moonGrad.addColorStop(0, "#fffdf2");
+    moonGrad.addColorStop(0.7, "#f3ecd2");
+    moonGrad.addColorStop(1, "#e0d6b0");
+    ctx.fillStyle = moonGrad;
+    ctx.beginPath();
+    ctx.arc(mx, my, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // quelques cratères discrets
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = "#a89968";
+    ctx.beginPath(); ctx.arc(mx - r * 0.3, my - r * 0.15, r * 0.16, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + r * 0.25, my + r * 0.3, r * 0.12, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + r * 0.1, my - r * 0.35, r * 0.09, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawStars(ctx) {
+    for (const s of stars) {
+      const twinkle = 0.6 + Math.sin(s.twinklePhase) * 0.4;
+      ctx.save();
+      ctx.globalAlpha = s.baseAlpha * twinkle;
+      ctx.fillStyle = "#fdf6e3";
+      if (s.isBright) {
+        // petite croix lumineuse pour les étoiles brillantes (effet scintillant marqué)
+        ctx.beginPath();
+        ctx.moveTo(s.x - s.size * 2.2, s.y);
+        ctx.lineTo(s.x + s.size * 2.2, s.y);
+        ctx.moveTo(s.x, s.y - s.size * 2.2);
+        ctx.lineTo(s.x, s.y + s.size * 2.2);
+        ctx.strokeStyle = "#fdf6e3";
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawCloud(ctx, c) {
+    ctx.save();
+    ctx.globalAlpha = c.opacity;
+    ctx.translate(c.x, c.y);
+    ctx.scale(c.scale, c.scale);
+    ctx.fillStyle = "#cfd6e8";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 35, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(-20, 3, 20, 11, 0, 0, Math.PI * 2);
+    ctx.ellipse(22, 4, 22, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Silhouettes de bambous/branches sombres en contre-jour, en bas de l'écran
+  function drawGroundSilhouettes(ctx) {
+    ctx.save();
+    const baseY = H;
+    ctx.fillStyle = "rgba(10, 14, 28, 0.55)";
+
+    for (let i = 0; i < 3; i++) {
+      const x = 20 + i * 18;
+      const h = 95 + i * 26;
+      ctx.fillRect(x, baseY - h, 6, h);
+      ctx.fillStyle = "rgba(10, 14, 28, 0.7)";
+      for (let n = 1; n < 4; n++) {
+        ctx.fillRect(x - 1, baseY - h + n * (h / 4), 8, 2);
+      }
+      ctx.fillStyle = "rgba(10, 14, 28, 0.55)";
+    }
+
+    // silhouette d'érable à droite, branches fines en contre-jour
+    ctx.strokeStyle = "rgba(10, 14, 28, 0.6)";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(W - 42, baseY);
+    ctx.quadraticCurveTo(W - 50, baseY - 35, W - 44, baseY - 55);
+    ctx.stroke();
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(W - 44, baseY - 50);
+    ctx.lineTo(W - 60, baseY - 70);
+    ctx.moveTo(W - 44, baseY - 50);
+    ctx.lineTo(W - 30, baseY - 68);
+    ctx.moveTo(W - 44, baseY - 55);
+    ctx.lineTo(W - 44, baseY - 78);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawLeaf(ctx, l) {
+    ctx.save();
+    ctx.translate(l.x, l.y);
+    ctx.rotate(l.rotation);
+    // feuille d'érable simplifiée, légèrement bleutée par le clair de lune
+    ctx.fillStyle = "rgba(180, 170, 210, 0.55)";
+    const size = l.size;
+    ctx.beginPath();
+    for (let p = 0; p < 5; p++) {
+      const a = (p / 5) * Math.PI * 2 - Math.PI / 2;
+      const px = Math.cos(a) * size, py = Math.sin(a) * size;
+      if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      const a2 = a + Math.PI / 5;
+      ctx.lineTo(Math.cos(a2) * size * 0.4, Math.sin(a2) * size * 0.4);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw(ctx, width, height) {
+    W = width; H = height;
+    drawSky(ctx);
+    drawMoon(ctx);
+    drawStars(ctx);
+    for (const c of clouds) drawCloud(ctx, c);
+    drawGroundSilhouettes(ctx);
+    for (const l of leaves) drawLeaf(ctx, l);
+  }
+
+  function resize(width, height) {
+    W = width; H = height;
+  }
+
+  return { init, update, draw, resize };
+})();
+
+
+/* ============================================
+   MOD-SCENERY-001 : Décor manga épuré
+   Bambous, bonsaï, cerisiers, papillons, nuages
+   Lecture seule du canvas — n'interagit jamais avec la logique de jeu
+   ============================================ */
+
+const Scenery = (() => {
+
+  let clouds = [];
+  let petals = [];
+  let butterflies = [];
+  let stars = [];
+  let W = 0, H = 0;
+  let currentTheme = "day"; // "day" (défaut) ou "moonlit" pour l'instant, d'autres viendront
+
+  function init(width, height, theme) {
+    W = width; H = height;
+    currentTheme = theme || "day";
+    clouds = [];
+    petals = [];
+    butterflies = [];
+    stars = [];
+
+    if (currentTheme === "moonlit") {
+      ThemeMoonlit.init(W, H, { stars, clouds });
+      return;
+    }
+
+    // Nuages (SCN-CLOUD)
+    for (let i = 0; i < 4; i++) {
+      clouds.push({
+        id: "SCN-CLOUD-" + i,
+        x: Math.random() * W,
+        y: 30 + Math.random() * 120,
+        scale: 0.6 + Math.random() * 0.8,
+        speed: 0.08 + Math.random() * 0.1,
+        opacity: 0.35 + Math.random() * 0.25
+      });
+    }
+
+    // Pétales de cerisier en chute lente (SCN-PETAL)
+    for (let i = 0; i < 14; i++) {
+      petals.push(spawnPetal(true));
+    }
+
+    // Papillons blancs (SCN-BUTTERFLY)
+    for (let i = 0; i < 3; i++) {
+      butterflies.push({
+        id: "SCN-BFLY-" + i,
+        x: Math.random() * W,
+        y: H * 0.3 + Math.random() * H * 0.3,
+        baseY: 0,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.3 + Math.random() * 0.3,
+        wingPhase: 0,
+        dir: Math.random() > 0.5 ? 1 : -1
+      });
+    }
+  }
+
+  function spawnPetal(randomY) {
+    return {
+      id: "SCN-PETAL-" + Math.random().toString(36).slice(2, 7),
+      x: Math.random() * W,
+      y: randomY ? Math.random() * H : -10,
+      size: 4 + Math.random() * 5,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.04,
+      fallSpeed: 0.3 + Math.random() * 0.5,
+      driftPhase: Math.random() * Math.PI * 2,
+      driftAmp: 15 + Math.random() * 20
+    };
+  }
+
+  function update(dt) {
+    if (currentTheme === "moonlit") {
+      ThemeMoonlit.update(dt);
+      return;
+    }
+
+    // Nuages dérivent
+    for (const c of clouds) {
+      c.x += c.speed * dt;
+      if (c.x > W + 80) c.x = -80;
+    }
+
+    // Pétales tombent en se balançant
+    for (const p of petals) {
+      p.y += p.fallSpeed * dt * 0.06;
+      p.driftPhase += 0.02 * dt;
+      p.x += Math.sin(p.driftPhase) * 0.15 * dt;
+      p.rotation += p.rotSpeed * dt;
+      if (p.y > H + 10) {
+        Object.assign(p, spawnPetal(false));
+      }
+    }
+
+    // Papillons volent en courbes douces
+    for (const b of butterflies) {
+      b.phase += 0.01 * dt;
+      b.wingPhase += 0.25 * dt;
+      b.x += b.dir * b.speed * dt * 0.05;
+      b.y += Math.sin(b.phase) * 0.3;
+      if (b.x > W + 20) { b.x = -20; }
+      if (b.x < -20) { b.x = W + 20; }
+    }
+  }
+
+  function drawCloud(ctx, c) {
+    ctx.save();
+    ctx.globalAlpha = c.opacity;
+    ctx.translate(c.x, c.y);
+    ctx.scale(c.scale, c.scale);
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 35, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(-22, 4, 22, 13, 0, 0, Math.PI * 2);
+    ctx.ellipse(24, 5, 24, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPetal(ctx, p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.fillStyle = "rgba(243, 197, 212, 0.85)";
+    ctx.beginPath();
+    ctx.moveTo(0, -p.size);
+    ctx.quadraticCurveTo(p.size * 0.8, 0, 0, p.size);
+    ctx.quadraticCurveTo(-p.size * 0.8, 0, 0, -p.size);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawButterfly(ctx, b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    const flap = Math.sin(b.wingPhase) * 0.6 + 0.4;
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.strokeStyle = "rgba(200,200,200,0.5)";
+    ctx.lineWidth = 0.5;
+    // aile gauche
+    ctx.save();
+    ctx.scale(flap, 1);
+    ctx.beginPath();
+    ctx.ellipse(-4, 0, 5, 3.5, 0.3, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // aile droite
+    ctx.save();
+    ctx.scale(flap, 1);
+    ctx.beginPath();
+    ctx.ellipse(4, 0, 5, 3.5, -0.3, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+  }
+
+  // Silhouettes bambou / bonsaï en bas de l'écran (statique, dessiné une fois par frame en bas)
+  function drawGroundSilhouettes(ctx) {
+    ctx.save();
+    const baseY = H;
+    ctx.fillStyle = "rgba(120, 140, 115, 0.18)";
+
+    // Bambous à gauche
+    for (let i = 0; i < 3; i++) {
+      const x = 20 + i * 18;
+      const h = 90 + i * 25;
+      ctx.fillRect(x, baseY - h, 6, h);
+      // noeuds de bambou
+      ctx.fillStyle = "rgba(120,140,115,0.28)";
+      for (let n = 1; n < 4; n++) {
+        ctx.fillRect(x - 1, baseY - h + n * (h / 4), 8, 2);
+      }
+      ctx.fillStyle = "rgba(120, 140, 115, 0.18)";
+    }
+
+    // Bonsaï à droite (silhouette ronde + tronc courbé)
+    ctx.beginPath();
+    ctx.moveTo(W - 40, baseY);
+    ctx.quadraticCurveTo(W - 55, baseY - 40, W - 45, baseY - 60);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(120,140,115,0.22)";
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(W - 45, baseY - 75, 28, 18, 0, 0, Math.PI * 2);
+    ctx.ellipse(W - 65, baseY - 65, 18, 13, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(150, 175, 140, 0.25)";
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function draw(ctx) {
+    if (currentTheme === "moonlit") {
+      ThemeMoonlit.draw(ctx, W, H);
+      return;
+    }
+    for (const c of clouds) drawCloud(ctx, c);
+    drawGroundSilhouettes(ctx);
+    for (const p of petals) drawPetal(ctx, p);
+    for (const b of butterflies) drawButterfly(ctx, b);
+  }
+
+  function resize(width, height) {
+    W = width; H = height;
+    if (currentTheme === "moonlit") ThemeMoonlit.resize(width, height);
+  }
+
+  return { init, update, draw, resize };
+})();
+
+
+/* ============================================
+   MOD-BUBBLES-001 : Bulles polygonales
+   Gère le spawn, la chute, la détection tap/swipe, le pop
+   Expose : Bubbles.init, .update, .draw, .spawnTick,
+            .handleTap, .handleSwipe, .resize
+   ============================================ */
+
+const Bubbles = (() => {
+
+  let list = [];
+  let W = 0, H = 0;
+  let spawnTimer = 0;
+  let spawnInterval = 950; // ms entre apparitions, ajusté dynamiquement
+  let idCounter = 0;
+  let onPopCallback = null;
+
+  const PALETTE_NORMAL = ["#bcd9c8", "#cfe3d4", "#d8e8e0", "#b8d4cf", "#cde0d6"];
+  const PALETTE_BONUS = ["#f3d27a", "#f0c869", "#f7d98f"];
+
+  function init(width, height, popCallback) {
+    W = width; H = height;
+    list = [];
+    spawnTimer = 0;
+    onPopCallback = popCallback;
+  }
+
+  function resize(width, height) {
+    W = width; H = height;
+  }
+
+  function randomPolygon(sides, radius) {
+    const pts = [];
+    const irregularity = 0.12;
+    for (let i = 0; i < sides; i++) {
+      const angle = (i / sides) * Math.PI * 2;
+      const r = radius * (1 - irregularity / 2 + Math.random() * irregularity);
+      pts.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+    }
+    return pts;
+  }
+
+  const NO_TARGET_TIMEOUT_MS = 1400; // si aucune bulle touchée pendant ce délai, le projectile s'éteint
+
+  function spawnBubble() {
+    const isBonus = Math.random() < 0.09;
+    const radius = isBonus ? 22 + Math.random() * 6 : 18 + Math.random() * 14;
+    const sides = isBonus ? 8 : 5 + Math.floor(Math.random() * 3);
+    const color = isBonus
+      ? PALETTE_BONUS[Math.floor(Math.random() * PALETTE_BONUS.length)]
+      : PALETTE_NORMAL[Math.floor(Math.random() * PALETTE_NORMAL.length)];
+
+    list.push({
+      id: "BUB-" + (idCounter++),
+      x: radius + Math.random() * (W - radius * 2),
+      y: -radius - 10,
+      radius,
+      baseRadius: radius,
+      vy: isBonus ? 0.32 + Math.random() * 0.15 : 0.4 + Math.random() * 0.3,
+      drift: (Math.random() - 0.5) * 0.4,
+      driftPhase: Math.random() * Math.PI * 2,
+      points: randomPolygon(sides, radius),
+      color,
+      isBonus,
+      popped: false,
+      popProgress: 0,
+      wobble: Math.random() * Math.PI * 2,
+      sparkle: Math.random(),
+      // ---- état projectile (utilisé uniquement si isBonus devient "launched") ----
+      launched: false,
+      launchVx: 0,
+      launchVy: 0,
+      msSinceLastHit: 0,
+      canRelaunch: true
+    });
+  }
+
+  function update(dt, elapsedMs) {
+    spawnTimer += dt;
+    // Difficulté/rythme léger : un peu plus fréquent avec le temps, reste zen
+    const dynamicInterval = Math.max(550, spawnInterval - elapsedMs * 0.02);
+    if (spawnTimer > dynamicInterval) {
+      spawnTimer = 0;
+      spawnBubble();
+    }
+
+    for (const b of list) {
+      if (b.popped) {
+        b.popProgress += dt * 0.006;
+        continue;
+      }
+
+      if (b.launched) {
+        // ---- physique projectile : déplacement + rebonds sur les bords ----
+        b.x += b.launchVx * dt * 0.06;
+        b.y += b.launchVy * dt * 0.06;
+
+        if (b.x - b.radius < 0) { b.x = b.radius; b.launchVx *= -1; }
+        if (b.x + b.radius > W) { b.x = W - b.radius; b.launchVx *= -1; }
+        if (b.y - b.radius < 0) { b.y = b.radius; b.launchVy *= -1; }
+        // léger frein pour que ça finisse par s'apaiser si pas assez de touches
+        b.launchVx *= 0.998;
+        b.launchVy *= 0.998;
+
+        b.msSinceLastHit += dt;
+        if (b.msSinceLastHit > NO_TARGET_TIMEOUT_MS) {
+          b.popped = true;
+          b.popProgress = 0.55;
+        }
+
+        // sortie par le bas = disparition discrète
+        if (b.y - b.radius > H + 20) {
+          b.popped = true;
+          b.popProgress = 0.6;
+        }
+        continue;
+      }
+
+      b.y += b.vy * dt * 0.06;
+      b.driftPhase += 0.02 * dt;
+      b.x += Math.sin(b.driftPhase) * b.drift;
+      b.wobble += 0.03 * dt;
+    }
+
+    // ---- collisions des projectiles bonus contre les bulles normales ----
+    for (const launcher of list) {
+      if (!launcher.launched || launcher.popped) continue;
+      for (const target of list) {
+        if (target === launcher || target.popped || target.isBonus || target.launched) continue;
+        const dx = target.x - launcher.x, dy = target.y - launcher.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= target.radius + launcher.radius) {
+          // éclate la cible, rebondit dans la direction opposée à l'impact
+          popBubble(target, true);
+          const nx = dx / (dist || 1), ny = dy / (dist || 1);
+          launcher.launchVx -= nx * 2.2;
+          launcher.launchVy -= ny * 2.2;
+          launcher.msSinceLastHit = 0;
+        }
+      }
+    }
+
+    // Nettoyage : bulles hors écran (en bas) ou pop terminé
+    list = list.filter(b => {
+      if (b.popped && b.popProgress > 1) return false;
+      if (!b.popped && !b.launched && b.y > H + b.radius + 20) return false; // disparaît doucement, pas de game over
+      return true;
+    });
+  }
+
+  function pointInBubble(px, py, b) {
+    const dx = px - b.x, dy = py - b.y;
+    return Math.sqrt(dx * dx + dy * dy) <= b.radius * 1.15;
+  }
+
+  // Tap = pop direct pour bulle normale uniquement
+  function handleTap(px, py) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const b = list[i];
+      if (b.popped || b.isBonus) continue;
+      if (pointInBubble(px, py, b)) {
+        popBubble(b);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Swipe = lance la bulle bonus comme un projectile (billard zen)
+  // ou la relance (une seule fois) si elle est déjà en mouvement
+  function handleSwipe(x1, y1, x2, y2) {
+    let actedOnOne = false;
+    for (const b of list) {
+      if (b.popped || !b.isBonus) continue;
+
+      const canAct = !b.launched || b.canRelaunch;
+      if (!canAct) continue;
+
+      const hitRadius = b.launched ? b.radius * 1.8 : b.radius * 1.3;
+      if (segmentCircleIntersect(x1, y1, x2, y2, b.x, b.y, hitRadius)) {
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const speed = Math.min(7, 1.8 + len * 0.09);
+
+        if (b.launched) {
+          b.canRelaunch = false; // relance unique consommée
+        }
+        b.launched = true;
+        b.launchVx = (dx / len) * speed;
+        b.launchVy = (dy / len) * speed;
+        b.msSinceLastHit = 0;
+        actedOnOne = true;
+      }
+    }
+    return actedOnOne;
+  }
+
+  function segmentCircleIntersect(x1, y1, x2, y2, cx, cy, r) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) {
+      return Math.hypot(cx - x1, cy - y1) <= r;
+    }
+    let t = ((cx - x1) * dx + (cy - y1) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const px = x1 + t * dx, py = y1 + t * dy;
+    return Math.hypot(cx - px, cy - py) <= r;
+  }
+
+  function popBubble(b, isChainHit) {
+    b.popped = true;
+    b.popProgress = 0;
+    if (onPopCallback) onPopCallback(b, !!isChainHit);
+  }
+
+  function drawBubble(ctx, b) {
+    ctx.save();
+    if (b.popped) {
+      const scale = 1 + b.popProgress * 0.8;
+      const alpha = 1 - b.popProgress;
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.translate(b.x, b.y);
+      ctx.scale(scale, scale);
+    } else {
+      ctx.translate(b.x, b.y);
+      const wob = Math.sin(b.wobble) * 0.03;
+      ctx.scale(1 + wob, 1 - wob);
+    }
+
+    // corps polygonal
+    ctx.beginPath();
+    b.points.forEach((p, i) => {
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+
+    ctx.fillStyle = b.color;
+    ctx.globalAlpha = (ctx.globalAlpha || 1) * 0.88;
+    ctx.fill();
+
+    ctx.lineWidth = b.isBonus ? 2 : 1.2;
+    ctx.strokeStyle = b.isBonus ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.6)";
+    ctx.stroke();
+
+    // reflet
+    ctx.beginPath();
+    ctx.ellipse(-b.radius * 0.3, -b.radius * 0.35, b.radius * 0.22, b.radius * 0.14, -0.4, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fill();
+
+    if (b.isBonus && !b.popped) {
+      ctx.beginPath();
+      ctx.arc(0, 0, b.radius * 1.25, 0, Math.PI * 2);
+      ctx.strokeStyle = b.launched ? "rgba(243,210,122,0.6)" : "rgba(243,210,122,0.35)";
+      ctx.lineWidth = b.launched ? 2.5 : 1.5;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function draw(ctx) {
+    for (const b of list) drawBubble(ctx, b);
+  }
+
+  function reset() {
+    list = [];
+    spawnTimer = 0;
+  }
+
+  return { init, update, draw, handleTap, handleSwipe, resize, reset };
+})();
+
+
+/* ============================================
+   MOD-HEART-001 : Cœur de progression
+   Remplace le timer — se remplit avec le nombre de bulles éclatées
+   Explose en petits papillons quand il est plein (fin de session)
+   ============================================ */
+
+const Heart = (() => {
+
+  let fillRatio = 0; // 0 -> 1
+  let totalNeeded = 40; // nombre de bulles à éclater pour remplir le cœur
+  let popped = 0;
+  let exploding = false;
+  let travelingToCenter = false;
+  let travelProgress = 0;
+  let startX = 0, startY = 0;
+  let explodeButterflies = [];
+  let onFullCallback = null;
+  let pulsePhase = 0;
+
+  function init(neededCount, onFull) {
+    totalNeeded = neededCount || 40;
+    popped = 0;
+    fillRatio = 0;
+    exploding = false;
+    travelingToCenter = false;
+    travelProgress = 0;
+    explodeButterflies = [];
+    onFullCallback = onFull;
+    pulsePhase = 0;
+  }
+
+  function registerPop() {
+    if (exploding || travelingToCenter) return;
+    popped++;
+    fillRatio = Math.min(1, popped / totalNeeded);
+    if (fillRatio >= 1) {
+      travelingToCenter = true;
+      travelProgress = 0;
+    }
+  }
+
+  let centerX = 0, centerY = 0; // position centrale calculée par game.js au moment du plein
+
+  function setExplosionCenter(x, y) {
+    centerX = x; centerY = y;
+  }
+
+  function triggerExplosion() {
+    exploding = true;
+    explodeButterflies = [];
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = 1.2 + Math.random() * 1.8;
+      explodeButterflies.push({
+        x: 0, y: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        wingPhase: Math.random() * Math.PI * 2,
+        life: 1,
+        size: 5 + Math.random() * 4
+      });
+    }
+    setTimeout(() => {
+      if (onFullCallback) onFullCallback();
+    }, 1100);
+  }
+
+  function update(dt) {
+    pulsePhase += dt * 0.004;
+
+    if (travelingToCenter) {
+      travelProgress += dt * 0.0022;
+      if (travelProgress >= 1) {
+        travelProgress = 1;
+        travelingToCenter = false;
+        triggerExplosion();
+      }
+      return;
+    }
+
+    if (exploding) {
+      for (const b of explodeButterflies) {
+        b.x += b.vx * dt * 0.05;
+        b.y += b.vy * dt * 0.05 - 0.15; // dérive légèrement vers le haut
+        b.vy *= 0.985;
+        b.vx *= 0.985;
+        b.wingPhase += 0.3 * dt;
+        b.life -= dt * 0.0009;
+      }
+      explodeButterflies = explodeButterflies.filter(b => b.life > 0);
+    }
+  }
+
+  // Dessine le cœur. cornerX/cornerY = position habituelle (coin) ; centerX/centerY = centre de l'écran (passé via setExplosionCenter)
+  function draw(ctx, cornerX, cornerY) {
+    let drawX = cornerX, drawY = cornerY;
+    let growScale = 1 + fillRatio * 0.65;
+
+    if (travelingToCenter) {
+      // easing doux vers le centre, et grossit encore plus en route
+      const t = travelProgress;
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      drawX = cornerX + (centerX - cornerX) * ease;
+      drawY = cornerY + (centerY - cornerY) * ease;
+      growScale = 1.65 + ease * 0.9; // continue de grossir jusqu'au centre
+    } else if (exploding) {
+      drawX = centerX; drawY = centerY;
+    }
+
+    const pulse = (exploding || travelingToCenter) ? 0 : Math.sin(pulsePhase * 6) * 0.04 * fillRatio;
+    const scale = growScale + pulse;
+
+    ctx.save();
+    ctx.translate(drawX, drawY);
+    ctx.scale(scale, scale);
+
+    if (!exploding) {
+      drawHeartShape(ctx, 0, 0, 16, "rgba(255,255,255,0.5)", "rgba(220,200,200,0.6)");
+      // remplissage style "jauge" via clip
+      ctx.save();
+      drawHeartPath(ctx, 0, 0, 16);
+      ctx.clip();
+      const fillH = 34 * fillRatio;
+      const grad = ctx.createLinearGradient(0, 18, 0, 18 - fillH);
+      grad.addColorStop(0, "#e88aa6");
+      grad.addColorStop(1, "#f3b8c9");
+      ctx.fillStyle = grad;
+      ctx.fillRect(-18, 18 - fillH, 36, fillH);
+      ctx.restore();
+
+      drawHeartPath(ctx, 0, 0, 16);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(220,160,180,0.7)";
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    if (exploding) {
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      for (const b of explodeButterflies) {
+        drawMiniButterfly(ctx, b);
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawHeartPath(ctx, x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + size * 0.3);
+    ctx.bezierCurveTo(x, y - size * 0.3, x - size, y - size * 0.3, x - size, y + size * 0.1);
+    ctx.bezierCurveTo(x - size, y + size * 0.6, x - size * 0.4, y + size * 0.9, x, y + size * 1.3);
+    ctx.bezierCurveTo(x + size * 0.4, y + size * 0.9, x + size, y + size * 0.6, x + size, y + size * 0.1);
+    ctx.bezierCurveTo(x + size, y - size * 0.3, x, y - size * 0.3, x, y + size * 0.3);
+    ctx.closePath();
+  }
+
+  function drawHeartShape(ctx, x, y, size, fillColor, strokeColor) {
+    drawHeartPath(ctx, x, y, size);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = strokeColor;
+    ctx.stroke();
+  }
+
+  function drawMiniButterfly(ctx, b) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, b.life);
+    ctx.translate(b.x, b.y);
+    const flap = Math.sin(b.wingPhase) * 0.6 + 0.4;
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.save(); ctx.scale(flap, 1);
+    ctx.beginPath(); ctx.ellipse(-b.size * 0.5, 0, b.size * 0.6, b.size * 0.4, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.scale(flap, 1);
+    ctx.beginPath(); ctx.ellipse(b.size * 0.5, 0, b.size * 0.6, b.size * 0.4, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function getProgress() {
+    return { popped, totalNeeded, fillRatio };
+  }
+
+  function isExploding() { return exploding; }
+  function isTraveling() { return travelingToCenter; }
+
+  return { init, registerPop, update, draw, getProgress, isExploding, isTraveling, setExplosionCenter };
+})();
+
+
+/* ============================================
+   MOD-SCROLL-001 : Parchemin japonais (makimono)
+   Dessiné entièrement en canvas pour un vrai rendu artistique
+   Indépendant — prend un texte + auteur + score, se dessine sur un canvas dédié
+   ============================================ */
+
+const Scroll = (() => {
+
+  let appearProgress = 0; // 0 -> 1, anim d'apparition (déroulé)
+  let visible = false;
+
+  function show() {
+    visible = true;
+    appearProgress = 0;
+  }
+
+  function hide() {
+    visible = false;
+    appearProgress = 0;
+  }
+
+  function update(dt) {
+    if (visible && appearProgress < 1) {
+      appearProgress = Math.min(1, appearProgress + dt * 0.0016);
+    }
+  }
+
+  function isVisible() { return visible; }
+  function getAppearProgress() { return appearProgress; }
+
+  // ---- Motif seigaiha (vagues en écailles concentriques) ----
+  function drawSeigaiha(ctx, w, h, color) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    const r = 14;
+    const rows = Math.ceil(h / (r * 0.75)) + 1;
+    const cols = Math.ceil(w / (r * 2)) + 1;
+    for (let row = 0; row < rows; row++) {
+      const y = row * r * 0.75;
+      const offsetX = (row % 2) * r;
+      for (let col = -1; col < cols; col++) {
+        const x = col * r * 2 + offsetX;
+        for (let layer = 0; layer < 3; layer++) {
+          ctx.beginPath();
+          ctx.arc(x + r, y + r * 0.6, r - layer * 4, Math.PI, 0, false);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  // ---- Texture papier washi : grain léger via points aléatoires (seedés pour stabilité) ----
+  let grainPoints = null;
+  function buildGrain(w, h) {
+    grainPoints = [];
+    const seedRandom = mulberry32(42);
+    const count = Math.floor((w * h) / 280);
+    for (let i = 0; i < count; i++) {
+      grainPoints.push({
+        x: seedRandom() * w,
+        y: seedRandom() * h,
+        r: 0.4 + seedRandom() * 0.8,
+        a: 0.04 + seedRandom() * 0.08
+      });
+    }
+  }
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function drawGrain(ctx, w, h) {
+    if (!grainPoints || grainPoints._w !== w) {
+      buildGrain(w, h);
+      grainPoints._w = w;
+    }
+    ctx.save();
+    for (const p of grainPoints) {
+      ctx.globalAlpha = p.a;
+      ctx.fillStyle = "#5a4a30";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---- Baguette de bois (rouleau) ----
+  function drawRod(ctx, x, y, width) {
+    ctx.save();
+    ctx.translate(x, y);
+    const rGrad = ctx.createLinearGradient(0, -7, 0, 7);
+    rGrad.addColorStop(0, "#6b4a2e");
+    rGrad.addColorStop(0.5, "#8a6440");
+    rGrad.addColorStop(1, "#5a3d24");
+    ctx.fillStyle = rGrad;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(-width / 2, -7, width, 14, 7);
+    } else {
+      ctx.rect(-width / 2, -7, width, 14);
+    }
+    ctx.fill();
+    // embouts arrondis (boutons de rouleau)
+    ctx.fillStyle = "#4a3018";
+    ctx.beginPath(); ctx.arc(-width / 2, 0, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(width / 2, 0, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.beginPath(); ctx.ellipse(0, -4, width / 2 - 4, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---- Fallback dessin texte espacé (si ctx.letterSpacing non supporté) ----
+  function drawSpacedText(ctx, text, centerX, y, spacing) {
+    const widths = text.split("").map(ch => ctx.measureText(ch).width);
+    const totalWidth = widths.reduce((a, b) => a + b, 0) + spacing * (text.length - 1);
+    let x = centerX - totalWidth / 2;
+    const prevAlign = ctx.textAlign;
+    ctx.textAlign = "left";
+    text.split("").forEach((ch, i) => {
+      ctx.fillText(ch, x, y);
+      x += widths[i] + spacing;
+    });
+    ctx.textAlign = prevAlign;
+  }
+
+  // ---- Texte multi-lignes avec retour automatique ----
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(" ");
+    const lines = [];
+    let current = "";
+    for (const word of words) {
+      const test = current ? current + " " + word : word;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  /**
+   * Dessine le parchemin complet.
+   * @param ctx contexte canvas
+   * @param cx, cy centre du parchemin
+   * @param maxW largeur max du papier
+   * @param quote {text, author}
+   * @param score nombre
+   */
+  function draw(ctx, cx, cy, maxW, quote, score) {
+    if (!visible) return;
+
+    // ease-out pour le déroulé
+    const t = appearProgress;
+    const ease = 1 - Math.pow(1 - t, 3);
+
+    const fullH = 280;
+    const paperH = fullH * ease; // se déroule verticalement
+    const paperW = maxW;
+    const topY = cy - fullH / 2;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, t * 2);
+
+    // ---- ombre portée ----
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 25;
+    ctx.shadowOffsetY = 10;
+
+    // ---- fond papier washi ----
+    const paperGrad = ctx.createLinearGradient(cx - paperW / 2, topY, cx + paperW / 2, topY + paperH);
+    paperGrad.addColorStop(0, "#f0e4c4");
+    paperGrad.addColorStop(0.5, "#e8d9b0");
+    paperGrad.addColorStop(1, "#f2e6c8");
+    ctx.fillStyle = paperGrad;
+    ctx.beginPath();
+    ctx.rect(cx - paperW / 2, topY, paperW, paperH);
+    ctx.fill();
+    ctx.restore();
+
+    // ---- clip pour motif + grain + texte (ne dépasse pas le papier déroulé) ----
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cx - paperW / 2, topY, paperW, paperH);
+    ctx.clip();
+
+    // motif seigaiha en filigrane
+    ctx.globalAlpha = 0.16;
+    drawSeigaiha(ctx, paperW, fullH, "#8a6a3a");
+    ctx.globalAlpha = 1;
+
+    // grain papier
+    ctx.translate(cx - paperW / 2, topY - (fullH - paperH));
+    drawGrain(ctx, paperW, fullH);
+    ctx.translate(-(cx - paperW / 2), -(topY - (fullH - paperH)));
+
+    // bordure encre fine à l'intérieur
+    ctx.strokeStyle = "rgba(110,80,40,0.4)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - paperW / 2 + 10, topY + 10, paperW - 20, fullH - 20);
+
+    // contenu texte uniquement quand assez déroulé
+    if (ease > 0.55) {
+      const textAlpha = Math.min(1, (ease - 0.55) / 0.35);
+      ctx.globalAlpha = textAlpha;
+
+      // sceau
+      const sealY = topY + 38;
+      ctx.save();
+      ctx.translate(cx, sealY);
+      const sealGrad = ctx.createRadialGradient(-4, -5, 2, 0, 0, 19);
+      sealGrad.addColorStop(0, "#c44b4b");
+      sealGrad.addColorStop(1, "#8a2e2e");
+      ctx.fillStyle = sealGrad;
+      ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(90,30,30,0.6)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#f2e6c8";
+      ctx.font = "16px 'Hiragino Mincho ProN', 'Noto Serif JP', serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("禅", 0, 1);
+      ctx.restore();
+
+      // titre
+      ctx.fillStyle = "#8a7245";
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      if ("letterSpacing" in ctx) {
+        ctx.save();
+        ctx.letterSpacing = "3px";
+        ctx.fillText("SAGESSE RÉCOLTÉE", cx, topY + 70);
+        ctx.restore();
+      } else {
+        drawSpacedText(ctx, "SAGESSE RÉCOLTÉE", cx, topY + 70, 3);
+      }
+
+      // citation (wrap automatique)
+      ctx.fillStyle = "#3d3221";
+      ctx.font = "italic 17px 'Hiragino Mincho ProN', 'Noto Serif JP', Georgia, serif";
+      const lines = wrapText(ctx, "\u201C" + quote.text + "\u201D", paperW - 50);
+      let ly = topY + 102;
+      for (const line of lines) {
+        ctx.fillText(line, cx, ly);
+        ly += 24;
+      }
+
+      // auteur
+      ctx.fillStyle = "#8a7245";
+      ctx.font = "italic 12px 'Hiragino Mincho ProN', serif";
+      ctx.fillText("— " + quote.author, cx, ly + 14);
+
+      // score
+      ctx.fillStyle = "#6b5a3a";
+      ctx.font = "13px sans-serif";
+      ctx.fillText("Score : " + score, cx, topY + fullH - 36);
+    }
+
+    ctx.restore(); // fin clip
+
+    // ---- baguettes de bois en haut et en bas ----
+    drawRod(ctx, cx, topY, paperW + 14);
+    drawRod(ctx, cx, topY + paperH, paperW + 14);
+
+    ctx.restore();
+  }
+
+  return { show, hide, update, draw, isVisible, getAppearProgress };
+})();
+
+
+/* ============================================
+   MOD-BONSAI-001 : Bonsaï génératif
+   7 essences, silhouette tronc/branches fixe par espèce,
+   feuilles générées par code, apparition progressive (1 par niveau, jusqu'à 888)
+   ============================================ */
+
+const Bonsai = (() => {
+
+  const LEVELS_PER_TREE = 888;
+  const LEAF_COUNT = 88; // nombre de "vraies" feuilles distinctes sur l'arbre complet
+  const LEVELS_PER_LEAF = LEVELS_PER_TREE / LEAF_COUNT; // ≈ 10.09 niveaux par feuille
+
+  // Convertit un niveau (0..888) en nombre de feuilles visibles (0..88)
+  function levelToLeafCount(level) {
+    const clamped = Math.min(LEVELS_PER_TREE, Math.max(0, level));
+    return Math.min(LEAF_COUNT, Math.ceil(clamped / LEVELS_PER_LEAF));
+  }
+
+  const SPECIES = [
+    {
+      id: "SP-erable",
+      name: "Érable sacré",
+      nameJp: "Momiji",
+      leafColor: ["#c44b3a", "#d9663f", "#e8853f"], // rouge-orange automnal
+      leafShape: "maple",
+      trunkColor: "#5a4030",
+      pot: { shape: "rect", color: "#5a3a2e", colorLight: "#7a5242" },
+      gameTheme: "moonlit"
+    },
+    {
+      id: "SP-pin",
+      name: "Pin noir du Japon",
+      nameJp: "Kuromatsu",
+      leafColor: ["#3a4a32", "#4a5a3a", "#2f3d28"],
+      leafShape: "needle",
+      trunkColor: "#3a2e22",
+      pot: { shape: "rect", color: "#2e3a36", colorLight: "#46584f" },
+      gameTheme: "mountain"
+    },
+    {
+      id: "SP-cerisier",
+      name: "Cerisier",
+      nameJp: "Sakura",
+      leafColor: ["#f3c5d4", "#f7d4e0", "#eeb3c8"],
+      leafShape: "blossom",
+      trunkColor: "#4a3a30",
+      pot: { shape: "oval", color: "#e8dcc8", colorLight: "#f5ecdc" },
+      gameTheme: "day"
+    },
+    {
+      id: "SP-genevrier",
+      name: "Genévrier",
+      nameJp: "Shimpaku",
+      leafColor: ["#7a9a8a", "#8aab9a", "#6a8a7a"],
+      leafShape: "cascade",
+      trunkColor: "#6a5040",
+      pot: { shape: "round", color: "#7a6048", colorLight: "#95795a" },
+      gameTheme: "oasis"
+    },
+    {
+      id: "SP-orme",
+      name: "Orme de Chine",
+      nameJp: "Nire",
+      leafColor: ["#8fae6a", "#9fbe7a", "#7f9e5a"],
+      leafShape: "round",
+      trunkColor: "#5a4838",
+      pot: { shape: "rect", color: "#8a7050", colorLight: "#a8895f" },
+      gameTheme: "rain"
+    },
+    {
+      id: "SP-azalee",
+      name: "Azalée",
+      nameJp: "Satsuki",
+      leafColor: ["#e85a7a", "#f06a8a", "#d84a6a"],
+      leafShape: "azalea",
+      trunkColor: "#4a3828",
+      pot: { shape: "oval", color: "#3a3a42", colorLight: "#54545e" },
+      gameTheme: "day"
+    },
+    {
+      id: "SP-if",
+      name: "If",
+      nameJp: "Kusamaki",
+      leafColor: ["#2f4a3a", "#3a5a45", "#27402f"],
+      leafShape: "yew",
+      trunkColor: "#4a3a2a",
+      pot: { shape: "round", color: "#4a4038", colorLight: "#665a4e" },
+      gameTheme: "snow"
+    }
+  ];
+
+  function getSpecies(index) {
+    return SPECIES[index % SPECIES.length];
+  }
+
+  function getTotalSpecies() { return SPECIES.length; }
+
+  // ---- RNG stable seedé (mêmes feuilles à chaque rendu pour un même arbre) ----
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---- Silhouette du tronc et des branches (fixe par espèce, via seed dérivé de speciesIndex) ----
+  // Retourne une liste de branches : chacune un segment {x1,y1,x2,y2,width} en coordonnées relatives (-100..100, 0 en bas)
+  function buildSkeleton(speciesIndex) {
+    const rand = mulberry32(1000 + speciesIndex * 37);
+    const branches = [];
+
+    // tronc principal, légèrement courbé façon bonsaï
+    const trunkBend = (rand() - 0.5) * 30;
+    const trunkBend2 = trunkBend * 0.3 + (rand() - 0.5) * 14;
+    branches.push(makeCurvedBranch(0, 0, trunkBend * 0.3, -45, 9, true, rand));
+    branches.push(makeCurvedBranch(trunkBend * 0.3, -45, trunkBend, -80, 6, true, rand));
+
+    // branches secondaires partant du tronc à différentes hauteurs
+    const branchCount = 5 + Math.floor(rand() * 3);
+    const leafClusters = []; // positions où les feuilles apparaissent, ancrées au bout de chaque branche
+
+    for (let i = 0; i < branchCount; i++) {
+      const t = 0.25 + (i / branchCount) * 0.7 + rand() * 0.08;
+      const baseX = trunkBend * t;
+      const baseY = -45 * Math.min(1, t * 1.6) - (t > 0.55 ? (t - 0.55) * 80 : 0);
+      const dir = i % 2 === 0 ? 1 : -1;
+      const length = 22 + rand() * 18;
+      const angle = (-0.3 - rand() * 0.5) * dir;
+      const endX = baseX + Math.cos(angle) * length * dir;
+      const endY = baseY - Math.sin(Math.abs(angle)) * length * 0.5 - length * 0.3;
+
+      const branch = makeCurvedBranch(baseX, baseY, endX, endY, 3 + rand() * 2, false, rand);
+      branches.push(branch);
+
+      // le cluster est centré directement sur la VRAIE pointe de la branche courbée,
+      // orienté selon la tangente réelle de la courbe à son extrémité (pas le segment droit théorique)
+      const tip = quadPoint(branch.x1, branch.y1, branch.cx, branch.cy, branch.x2, branch.y2, 1);
+      const tangent = quadTangent(branch.x1, branch.y1, branch.cx, branch.cy, branch.x2, branch.y2, 1);
+      const tanLen = Math.hypot(tangent.x, tangent.y) || 1;
+      const normX = tangent.x / tanLen;
+      const normY = tangent.y / tanLen;
+      const clusterRadius = 6.5 + rand() * 5;
+      leafClusters.push({
+        x: tip.x,
+        y: tip.y,
+        radius: clusterRadius,
+        anchorX: tip.x,
+        anchorY: tip.y,
+        dirAngle: Math.atan2(normY, normX)
+      });
+    }
+
+    // bouquet de feuillage au sommet, centré directement sur la pointe réelle du tronc (après courbure)
+    const trunkTip = quadPoint(
+      branches[1].x1, branches[1].y1, branches[1].cx, branches[1].cy, branches[1].x2, branches[1].y2, 1
+    );
+    leafClusters.push({
+      x: trunkTip.x, y: trunkTip.y, radius: 11 + rand() * 3,
+      anchorX: trunkTip.x, anchorY: trunkTip.y, dirAngle: -Math.PI / 2
+    });
+
+    return { branches, leafClusters, trunkBend };
+  }
+
+  // ---- Construit une branche avec un point de contrôle de courbure (Bézier quadratique) ----
+  // Le décalage du point de contrôle est perpendiculaire au segment, pour un effet sinueux naturel
+  function makeCurvedBranch(x1, y1, x2, y2, width, isTrunk, rand) {
+    const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const perpX = -dy / len, perpY = dx / len;
+    // courbure plus marquée sur le tronc (plus long, plus de matière pour onduler)
+    const curveStrength = (isTrunk ? 0.18 : 0.12) * len * (rand() - 0.5) * 2;
+    return {
+      x1, y1, x2, y2, width, isTrunk,
+      cx: midX + perpX * curveStrength,
+      cy: midY + perpY * curveStrength,
+      barkSeed: Math.floor(rand() * 100000)
+    };
+  }
+
+  // ---- Génère N positions de feuilles à l'intérieur des clusters de feuillage (stable via seed) ----
+  // Les feuilles sont entrelacées entre les clusters : à n'importe quel niveau intermédiaire,
+  // chaque branche a déjà reçu sa juste part de feuillage, pour une silhouette harmonieuse.
+  function buildLeafPositions(speciesIndex, count) {
+    const skeleton = buildSkeleton(speciesIndex);
+    const rand = mulberry32(5000 + speciesIndex * 91);
+
+    // répartit le nombre total de feuilles par cluster, proportionnellement à sa surface
+    const totalArea = skeleton.leafClusters.reduce((s, c) => s + c.radius * c.radius, 0);
+    let remaining = count;
+    const targetPerCluster = skeleton.leafClusters.map((c, i) => {
+      const isLast = i === skeleton.leafClusters.length - 1;
+      const n = isLast ? remaining : Math.round((c.radius * c.radius / totalArea) * count);
+      remaining -= n;
+      return Math.max(0, n);
+    });
+
+    // pré-génère toutes les positions possibles, cluster par cluster (déterministe)
+    const perClusterPositions = skeleton.leafClusters.map((cluster, ci) => {
+      const n = targetPerCluster[ci];
+      const pts = [];
+      for (let i = 0; i < n; i++) {
+        // dispersion en arc centré sur la direction de la branche (±100°), pour que le feuillage
+        // prolonge visuellement la pointe plutôt que de moitié retomber vers le tronc
+        const angle = cluster.dirAngle + (rand() - 0.5) * 2.0;
+        const r = Math.sqrt(rand()) * cluster.radius;
+        // la rotation de la feuille varie modérément autour de la direction de la branche,
+        // pour que le feuillage semble "pousser" dans le sens de la pointe plutôt qu'aléatoire
+        // dirAngle suit la convention atan2 (0 = horizontal droite), mais les formes de feuilles
+        // sont dessinées avec leur pointe de référence vers le haut (-90°) : on compense ce décalage
+        // avant d'ajouter une légère variation aléatoire pour un effet naturel
+        const leafRot = cluster.dirAngle + Math.PI / 2 + (rand() - 0.5) * 1.4;
+        pts.push({
+          x: cluster.x + Math.cos(angle) * r,
+          y: cluster.y + Math.sin(angle) * r,
+          size: 4.2 + rand() * 4.2,
+          rot: leafRot,
+          colorIdx: Math.floor(rand() * 3)
+        });
+      }
+      return pts;
+    });
+
+    // entrelace : on prend une feuille à tour de rôle dans chaque cluster (round-robin),
+    // pondéré par la taille relative de chaque cluster pour rester proportionnel
+    const positions = [];
+    const cursors = perClusterPositions.map(() => 0);
+    let totalRemaining = count;
+    while (totalRemaining > 0) {
+      let addedThisRound = false;
+      for (let ci = 0; ci < perClusterPositions.length; ci++) {
+        if (cursors[ci] < perClusterPositions[ci].length) {
+          positions.push(perClusterPositions[ci][cursors[ci]]);
+          cursors[ci]++;
+          totalRemaining--;
+          addedThisRound = true;
+          if (totalRemaining <= 0) break;
+        }
+      }
+      if (!addedThisRound) break; // sécurité anti-boucle infinie
+    }
+
+    return { skeleton, positions };
+  }
+
+  // ---- Dessine une branche/tronc : courbe sinueuse, volume cylindrique, texture d'écorce ----
+  function drawBranch(ctx, b, baseColor) {
+    const dx = b.x2 - b.x1, dy = b.y2 - b.y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const perpX = -dy / len, perpY = dx / len;
+
+    // dégradé perpendiculaire à la direction : simule un éclairage latéral sur un cylindre
+    const lightOffset = b.width * 0.6;
+    const grad = ctx.createLinearGradient(
+      b.x1 - perpX * lightOffset, b.y1 - perpY * lightOffset,
+      b.x1 + perpX * lightOffset, b.y1 + perpY * lightOffset
+    );
+    grad.addColorStop(0, lightenColor(baseColor, 18));
+    grad.addColorStop(0.45, baseColor);
+    grad.addColorStop(1, darkenColor(baseColor, 22));
+
+    // tracé principal : courbe de Bézier quadratique via le point de contrôle
+    ctx.strokeStyle = grad;
+    ctx.lineCap = "round";
+    ctx.lineWidth = b.width;
+    ctx.beginPath();
+    ctx.moveTo(b.x1, b.y1);
+    ctx.quadraticCurveTo(b.cx, b.cy, b.x2, b.y2);
+    ctx.stroke();
+
+    // texture d'écorce : petits traits courts, irréguliers, le long de la courbe,
+    // seedés par branche pour rester stables d'une frame à l'autre
+    const barkRand = mulberry32(b.barkSeed);
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = darkenColor(baseColor, 35);
+    ctx.lineWidth = Math.max(0.4, b.width * 0.06);
+    const strieCount = Math.max(2, Math.floor(b.width * 1.1));
+    for (let s = 0; s < strieCount; s++) {
+      const tStart = barkRand();
+      const tLen = 0.08 + barkRand() * 0.16;
+      const lateral = (barkRand() - 0.5) * b.width * 0.7;
+      ctx.beginPath();
+      for (let step = 0; step <= 4; step++) {
+        const t = Math.min(1, tStart + (step / 4) * tLen);
+        const pt = quadPoint(b.x1, b.y1, b.cx, b.cy, b.x2, b.y2, t);
+        const jitter = (barkRand() - 0.5) * b.width * 0.15;
+        const px = pt.x + perpX * (lateral + jitter);
+        const py = pt.y + perpY * (lateral + jitter);
+        if (step === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Point sur une courbe de Bézier quadratique au paramètre t (0..1)
+  function quadPoint(x1, y1, cx, cy, x2, y2, t) {
+    const u = 1 - t;
+    return {
+      x: u * u * x1 + 2 * u * t * cx + t * t * x2,
+      y: u * u * y1 + 2 * u * t * cy + t * t * y2
+    };
+  }
+
+  // Vecteur tangent (dérivée) à une courbe de Bézier quadratique au paramètre t (0..1)
+  // Donne la vraie direction de la courbe à ce point, plutôt que la direction du segment droit théorique
+  function quadTangent(x1, y1, cx, cy, x2, y2, t) {
+    const u = 1 - t;
+    return {
+      x: 2 * u * (cx - x1) + 2 * t * (x2 - cx),
+      y: 2 * u * (cy - y1) + 2 * t * (y2 - cy)
+    };
+  }
+
+  // ---- Utilitaires couleur : éclaircir/foncer une couleur hex pour le dégradé de volume ----
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    return {
+      r: parseInt(h.substring(0, 2), 16),
+      g: parseInt(h.substring(2, 4), 16),
+      b: parseInt(h.substring(4, 6), 16)
+    };
+  }
+  function lightenColor(hex, amount) {
+    const { r, g, b } = hexToRgb(hex);
+    return `rgb(${Math.min(255, r + amount)}, ${Math.min(255, g + amount)}, ${Math.min(255, b + amount)})`;
+  }
+  function darkenColor(hex, amount) {
+    const { r, g, b } = hexToRgb(hex);
+    return `rgb(${Math.max(0, r - amount)}, ${Math.max(0, g - amount)}, ${Math.max(0, b - amount)})`;
+  }
+
+  // ---- Pot du bonsaï : 3 formes possibles, avec dégradé glacé façon céramique et reflet ----
+  function drawPot(ctx, pot) {
+    const grad = ctx.createLinearGradient(0, 2, 0, 20);
+    grad.addColorStop(0, pot.colorLight);
+    grad.addColorStop(1, pot.color);
+
+    ctx.save();
+
+    if (pot.shape === "round") {
+      // pot rond, type bol large et bas
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-21, 5);
+      ctx.quadraticCurveTo(-22, 17, -15, 19);
+      ctx.lineTo(15, 19);
+      ctx.quadraticCurveTo(22, 17, 21, 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+      // bord supérieur (lèvre du pot)
+      ctx.fillStyle = pot.colorLight;
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 21, 3.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.15)";
+      ctx.stroke();
+    } else if (pot.shape === "oval") {
+      // pot ovale, plus doux, type cerisier/azalée
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(0, 12, 21, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.15)";
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+      ctx.fillStyle = pot.colorLight;
+      ctx.beginPath();
+      ctx.ellipse(0, 5, 20, 3.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.12)";
+      ctx.stroke();
+    } else {
+      // pot rectangulaire classique, type érable/pin/orme
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-22, 4); ctx.lineTo(22, 4); ctx.lineTo(18, 19); ctx.lineTo(-18, 19);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+      // rebord plat supérieur
+      ctx.fillStyle = pot.colorLight;
+      ctx.fillRect(-23, 1, 46, 4);
+      ctx.strokeStyle = "rgba(0,0,0,0.15)";
+      ctx.strokeRect(-23, 1, 46, 4);
+      // petits pieds
+      ctx.fillStyle = pot.color;
+      ctx.fillRect(-16, 19, 4, 3);
+      ctx.fillRect(12, 19, 4, 3);
+    }
+
+    // léger reflet glacé sur le flanc gauche, commun aux 3 formes
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(-12, 11, 4, 7, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  // ---- Dessin d'une feuille selon la forme de l'espèce ----
+  function drawLeaf(ctx, x, y, size, rot, color, shape) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.fillStyle = color;
+
+    if (shape === "needle") {
+      // touffe de 3 aiguilles fines type pin, partant d'un point commun
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(0.5, size * 0.14);
+      ctx.lineCap = "round";
+      for (let n = -1; n <= 1; n++) {
+        const a = n * 0.32;
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.3);
+        ctx.lineTo(Math.sin(a) * size * 1.3, -size * 1.1);
+        ctx.stroke();
+      }
+    } else if (shape === "yew") {
+      // aiguille plate et courte, plus large que le pin, type if
+      ctx.beginPath();
+      ctx.moveTo(0, size);
+      ctx.quadraticCurveTo(size * 0.32, size * 0.2, size * 0.16, -size);
+      ctx.quadraticCurveTo(0, -size * 1.1, -size * 0.16, -size);
+      ctx.quadraticCurveTo(-size * 0.32, size * 0.2, 0, size);
+      ctx.fill();
+      // nervure centrale
+      ctx.strokeStyle = "rgba(0,0,0,0.15)";
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      ctx.moveTo(0, size * 0.8); ctx.lineTo(0, -size * 0.9);
+      ctx.stroke();
+    } else if (shape === "blossom") {
+      // fleur sakura : 5 pétales arrondis échancrés + cœur plus foncé
+      for (let p = 0; p < 5; p++) {
+        ctx.save();
+        ctx.rotate((p / 5) * Math.PI * 2);
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.15);
+        ctx.quadraticCurveTo(size * 0.42, -size * 0.55, size * 0.16, -size * 1.05);
+        ctx.quadraticCurveTo(0, -size * 1.15, 0, -size * 0.95);
+        ctx.quadraticCurveTo(0, -size * 1.15, -size * 0.16, -size * 1.05);
+        ctx.quadraticCurveTo(-size * 0.42, -size * 0.55, 0, -size * 0.15);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = "rgba(180,60,70,0.55)";
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (shape === "azalea") {
+      // fleur azalée : pétales plus allongés et pointus que le sakura, plus ouverte
+      for (let p = 0; p < 5; p++) {
+        ctx.save();
+        ctx.rotate((p / 5) * Math.PI * 2);
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.1);
+        ctx.quadraticCurveTo(size * 0.38, -size * 0.7, 0, -size * 1.3);
+        ctx.quadraticCurveTo(-size * 0.38, -size * 0.7, 0, -size * 0.1);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = "rgba(120,30,40,0.5)";
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+      // petites étamines fines
+      ctx.strokeStyle = "rgba(120,30,40,0.4)";
+      ctx.lineWidth = 0.4;
+      for (let s = 0; s < 3; s++) {
+        const a = (s / 3) * Math.PI * 2 + 0.4;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * size * 0.5, Math.sin(a) * size * 0.5 - size * 0.3);
+        ctx.stroke();
+      }
+    } else if (shape === "maple") {
+      // vraie feuille d'érable : 5 lobes pointus avec échancrures, nervures partant du centre
+      const lobes = 5;
+      ctx.beginPath();
+      for (let p = 0; p < lobes; p++) {
+        const baseAngle = -Math.PI / 2 + (p - (lobes - 1) / 2) * 0.62;
+        const tipX = Math.sin(baseAngle) * size;
+        const tipY = -Math.cos(baseAngle) * size;
+        const inX = Math.sin(baseAngle - 0.31) * size * 0.42;
+        const inY = -Math.cos(baseAngle - 0.31) * size * 0.42;
+        const outBeforeX = Math.sin(baseAngle - 0.18) * size * 0.78;
+        const outBeforeY = -Math.cos(baseAngle - 0.18) * size * 0.78;
+        const outAfterX = Math.sin(baseAngle + 0.18) * size * 0.78;
+        const outAfterY = -Math.cos(baseAngle + 0.18) * size * 0.78;
+
+        if (p === 0) ctx.moveTo(inX, inY);
+        else ctx.lineTo(inX, inY);
+        ctx.lineTo(outBeforeX, outBeforeY);
+        ctx.lineTo(tipX, tipY);
+        ctx.lineTo(outAfterX, outAfterY);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // nervures fines partant du point d'attache
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      ctx.lineWidth = 0.4;
+      for (let p = 0; p < lobes; p++) {
+        const baseAngle = -Math.PI / 2 + (p - (lobes - 1) / 2) * 0.62;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.sin(baseAngle) * size * 0.9, -Math.cos(baseAngle) * size * 0.9);
+        ctx.stroke();
+      }
+    } else if (shape === "cascade") {
+      // genévrier : touffe d'écailles en éventail, plus large et fournie
+      for (let s = -2; s <= 2; s++) {
+        ctx.save();
+        ctx.rotate(s * 0.34);
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.18, size * 0.55);
+        ctx.quadraticCurveTo(-size * 0.05, -size * 0.3, 0, -size * 1.05);
+        ctx.quadraticCurveTo(size * 0.05, -size * 0.3, size * 0.18, size * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    } else {
+      // orme : feuille ovale asymétrique avec dents marquées sur les bords, nervure centrale visible
+      ctx.beginPath();
+      ctx.moveTo(0, -size);
+      ctx.bezierCurveTo(size * 0.55, -size * 0.75, size * 0.62, -size * 0.1, size * 0.5, size * 0.25);
+      ctx.bezierCurveTo(size * 0.4, size * 0.65, size * 0.18, size * 0.92, 0, size);
+      ctx.bezierCurveTo(-size * 0.18, size * 0.92, -size * 0.42, size * 0.6, -size * 0.5, size * 0.2);
+      ctx.bezierCurveTo(-size * 0.62, -size * 0.15, -size * 0.5, -size * 0.78, 0, -size);
+      ctx.closePath();
+      ctx.fill();
+
+      // dents triangulaires marquées sur le contour (visibles même en petit format)
+      ctx.fillStyle = color;
+      const teeth = 5;
+      for (let n = -teeth; n <= teeth; n++) {
+        const ty = n * (size / teeth) * 0.85;
+        const edgeX = size * (0.55 - Math.pow(Math.abs(n) / teeth, 1.4) * 0.45);
+        ctx.beginPath();
+        ctx.moveTo(edgeX * 0.82, ty - size * 0.07);
+        ctx.lineTo(edgeX * 1.12, ty);
+        ctx.lineTo(edgeX * 0.82, ty + size * 0.07);
+        ctx.closePath();
+        ctx.fill();
+        // symétrique à gauche
+        ctx.beginPath();
+        ctx.moveTo(-edgeX * 0.82, ty - size * 0.07);
+        ctx.lineTo(-edgeX * 1.12, ty);
+        ctx.lineTo(-edgeX * 0.82, ty + size * 0.07);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // nervure centrale + nervures secondaires obliques
+      ctx.strokeStyle = "rgba(0,0,0,0.22)";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.9); ctx.lineTo(0, size * 0.9);
+      for (let n = -3; n <= 3; n++) {
+        if (n === 0) continue;
+        const ny = n * size * 0.25;
+        ctx.moveTo(0, ny);
+        ctx.lineTo(Math.sign(n) * size * 0.32, ny + size * 0.18);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Dessine le bonsaï complet à un niveau donné.
+   * ctx, cx/cy = base du tronc (point au sol), scale = échelle px par unité, speciesIndex, level (0..888)
+   * highlightProgress (0..1, optionnel) : si fourni, anime un halo sur la toute dernière feuille ajoutée
+   */
+  function draw(ctx, cx, cy, scale, speciesIndex, level, highlightProgress) {
+    const species = getSpecies(speciesIndex);
+    const leafCount = levelToLeafCount(level);
+    const { skeleton, positions } = buildLeafPositions(speciesIndex, LEAF_COUNT);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+
+    // pot, distinct par espèce (forme + couleur)
+    drawPot(ctx, species.pot);
+
+    // branches/tronc (fixe), dessinées en courbes avec volume et texture d'écorce
+    for (const b of skeleton.branches) {
+      drawBranch(ctx, b, species.trunkColor);
+    }
+
+    // feuilles progressives (seules les `leafCount` premières des 88 sont visibles)
+    const lastIdx = leafCount - 1;
+    for (let i = 0; i < leafCount && i < positions.length; i++) {
+      const p = positions[i];
+      const isLast = (i === lastIdx) && highlightProgress !== undefined && highlightProgress !== null;
+
+      if (isLast) {
+        // halo pulsant doré derrière la nouvelle feuille
+        const haloPulse = 0.5 + Math.sin(highlightProgress * Math.PI * 4) * 0.5;
+        ctx.save();
+        ctx.globalAlpha = 0.55 * (1 - Math.min(1, highlightProgress));
+        ctx.fillStyle = "#ffe28a";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (2.2 + haloPulse * 1.2), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // la feuille elle-même grossit légèrement à son apparition (effet "pop")
+        const growIn = Math.min(1, highlightProgress * 2.2);
+        ctx.save();
+        ctx.globalAlpha = growIn;
+        drawLeaf(ctx, p.x, p.y, p.size * (0.6 + growIn * 0.4), p.rot, species.leafColor[p.colorIdx], species.leafShape);
+        ctx.restore();
+      } else {
+        drawLeaf(ctx, p.x, p.y, p.size, p.rot, species.leafColor[p.colorIdx], species.leafShape);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function getLevelsPerTree() { return LEVELS_PER_TREE; }
+
+  function getLeafCount() { return LEAF_COUNT; }
+
+  return { SPECIES, getSpecies, getTotalSpecies, getLevelsPerTree, getLeafCount, levelToLeafCount, draw };
+})();
+
+
+/* ============================================
+   MOD-PROGRESS-001 : Progression du jardin de bonsaïs
+   Sauvegarde via window.storage (persiste sur l'appareil)
+   ============================================ */
+
+const Progress = (() => {
+
+  const STORAGE_KEY = "bonsai-progress-v1";
+  let state = {
+    speciesIndex: 0,
+    level: 0, // 0 -> 888 (feuilles actuelles de l'arbre en cours)
+    completedSpecies: [] // indices des arbres déjà terminés (888 atteint)
+  };
+  let loaded = false;
+
+  // Stockage : window.storage dans Claude, sinon localStorage (navigateur, GitHub Pages)
+  async function storageGet() {
+    if (window.storage) {
+      const r = await window.storage.get(STORAGE_KEY, false);
+      return r && r.value ? r.value : null;
+    }
+    return window.localStorage.getItem(STORAGE_KEY);
+  }
+  async function storageSet(value) {
+    if (window.storage) { await window.storage.set(STORAGE_KEY, value, false); return; }
+    window.localStorage.setItem(STORAGE_KEY, value);
+  }
+
+  async function load() {
+    try {
+      const raw = await storageGet();
+      if (raw) state = Object.assign(state, JSON.parse(raw));
+    } catch (e) {
+      // pas de sauvegarde existante, ou stockage indisponible : on garde l'état par défaut
+    }
+    loaded = true;
+    return state;
+  }
+
+  async function save() {
+    try {
+      await storageSet(JSON.stringify(state));
+    } catch (e) {
+      // échec silencieux : le jeu continue même sans sauvegarde persistée
+      console.warn("Sauvegarde progression impossible :", e);
+    }
+  }
+
+  function getState() { return state; }
+
+  function isLoaded() { return loaded; }
+
+  // Appelé à chaque cœur rempli (1 session = 1 niveau)
+  async function advanceLevel() {
+    const maxLevel = Bonsai.getLevelsPerTree();
+    state.level = Math.min(maxLevel, state.level + 1);
+
+    if (state.level >= maxLevel) {
+      // arbre terminé : on le marque comme complété
+      if (!state.completedSpecies.includes(state.speciesIndex)) {
+        state.completedSpecies.push(state.speciesIndex);
+      }
+    }
+    await save();
+    return state;
+  }
+
+  // Choisir un nouvel arbre (après avoir terminé le précédent, ou changement manuel)
+  async function chooseSpecies(index) {
+    state.speciesIndex = index;
+    state.level = state.completedSpecies.includes(index) ? Bonsai.getLevelsPerTree() : 0;
+    await save();
+    return state;
+  }
+
+  function isCurrentTreeComplete() {
+    return state.level >= Bonsai.getLevelsPerTree();
+  }
+
+  return { load, save, getState, isLoaded, advanceLevel, chooseSpecies, isCurrentTreeComplete };
+})();
+
+
+/* ============================================
+   MOD-GARDEN-001 : Orchestration de l'écran Jardin
+   Affiche le bonsaï en cours, gère le sélecteur d'espèces, la navigation
+   Dépend de : Bonsai, Progress
+   ============================================ */
+
+const Garden = (() => {
+
+  let canvas, ctx;
+  let speciesRow, progressFill, progressLabel, treeNameEl, treeJpEl;
+  let animFrame = null;
+  let visible = false;
+
+  function init() {
+    canvas = document.getElementById("garden-canvas");
+    ctx = canvas.getContext("2d");
+    speciesRow = document.getElementById("garden-species-row");
+    progressFill = document.getElementById("garden-progress-fill");
+    progressLabel = document.getElementById("garden-progress-label");
+    treeNameEl = document.getElementById("garden-tree-name");
+    treeJpEl = document.getElementById("garden-tree-jp");
+
+    buildSpeciesRow();
+  }
+
+  function buildSpeciesRow() {
+    speciesRow.innerHTML = "";
+    const state = Progress.getState();
+    const totalSpecies = Bonsai.getTotalSpecies();
+
+    for (let i = 0; i < totalSpecies; i++) {
+      const sp = Bonsai.getSpecies(i);
+      const chip = document.createElement("button");
+      chip.className = "garden-species-chip";
+      chip.textContent = speciesEmoji(sp.leafShape);
+
+      const isActive = state.speciesIndex === i;
+      const isComplete = state.completedSpecies.includes(i);
+      // débloqué si c'est l'arbre en cours, déjà complété, ou le suivant juste après le dernier complété/en cours
+      const unlocked = isActive || isComplete || i <= state.speciesIndex;
+
+      if (isActive) chip.classList.add("active");
+      if (isComplete) chip.classList.add("complete");
+      if (!unlocked) chip.classList.add("locked");
+
+      chip.addEventListener("click", () => {
+        if (!unlocked) return;
+        Progress.chooseSpecies(i).then(() => {
+          buildSpeciesRow();
+          refreshHeader();
+        });
+      });
+
+      speciesRow.appendChild(chip);
+    }
+  }
+
+  function speciesEmoji(shape) {
+    if (shape === "blossom") return "🌸";
+    if (shape === "needle") return "🌲";
+    return "🌳";
+  }
+
+  function refreshHeader() {
+    const state = Progress.getState();
+    const sp = Bonsai.getSpecies(state.speciesIndex);
+    treeNameEl.textContent = sp.name;
+    treeJpEl.textContent = sp.nameJp;
+    const maxLevel = Bonsai.getLevelsPerTree();
+    progressFill.style.width = (state.level / maxLevel * 100) + "%";
+    progressLabel.textContent = "Niveau " + state.level + " / " + maxLevel;
+  }
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w: rect.width, h: rect.height };
+  }
+
+  // ---- Décor : étagère de bois + petits accessoires de jardinier ----
+  // Seedé pour rester stable d'une frame à l'autre (pas de scintillement)
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function drawShelfBackground(ctx, w, h) {
+    // mur doux en fond, légèrement texturé
+    const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
+    wallGrad.addColorStop(0, "#eef1e6");
+    wallGrad.addColorStop(1, "#e2e8da");
+    ctx.fillStyle = wallGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    const shelfY = h * 0.82; // hauteur de la planche principale (où repose le bonsaï)
+    const shelfThickness = h * 0.045;
+
+    // planche d'étagère : dégradé bois + grain horizontal léger
+    const woodGrad = ctx.createLinearGradient(0, shelfY, 0, shelfY + shelfThickness);
+    woodGrad.addColorStop(0, "#b08a5e");
+    woodGrad.addColorStop(0.5, "#9a7048");
+    woodGrad.addColorStop(1, "#7a5838");
+    ctx.fillStyle = woodGrad;
+    ctx.fillRect(0, shelfY, w, shelfThickness);
+
+    // grain de bois (traits seedés stables)
+    const rand = mulberry32(777);
+    ctx.save();
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = "#5a3e22";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const gy = shelfY + 3 + rand() * (shelfThickness - 6);
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      for (let x = 0; x < w; x += 30) {
+        ctx.lineTo(x + rand() * 10, gy + (rand() - 0.5) * 2.5);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // tranche avant de la planche (effet d'épaisseur 3D)
+    ctx.fillStyle = "#6a4a2e";
+    ctx.fillRect(0, shelfY + shelfThickness, w, h * 0.025);
+
+    // ombre douce projetée sous l'étagère
+    const shadowGrad = ctx.createLinearGradient(0, shelfY + shelfThickness * 1.5, 0, shelfY + shelfThickness * 1.5 + h * 0.06);
+    shadowGrad.addColorStop(0, "rgba(0,0,0,0.12)");
+    shadowGrad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = shadowGrad;
+    ctx.fillRect(0, shelfY + shelfThickness * 1.5, w, h * 0.06);
+
+    return { shelfY, shelfThickness, rand };
+  }
+
+  // Petit arrosoir en zinc, posé à droite de l'arbre
+  function drawWateringCan(ctx, x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = "#8a9aa0";
+    // corps
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.quadraticCurveTo(-12, -16, -4, -18);
+    ctx.lineTo(8, -18);
+    ctx.quadraticCurveTo(13, -14, 11, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    // bec verseur
+    ctx.beginPath();
+    ctx.moveTo(8, -14);
+    ctx.lineTo(22, -22);
+    ctx.lineTo(24, -19);
+    ctx.lineTo(10, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // anse
+    ctx.beginPath();
+    ctx.moveTo(-6, -17);
+    ctx.quadraticCurveTo(-2, -28, 4, -17);
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "#8a9aa0";
+    ctx.stroke();
+    // petit reflet
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(-5, -8, 1.6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Petit sécateur posé à plat
+  function drawPruningShears(ctx, x, y, scale, rot) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.scale(scale, scale);
+    // lames
+    ctx.strokeStyle = "#9a9a9a";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-2, 0); ctx.lineTo(-14, -8);
+    ctx.moveTo(2, 0); ctx.lineTo(14, -8);
+    ctx.stroke();
+    // poignées (manches colorés)
+    ctx.strokeStyle = "#c44b3a";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-2, 0); ctx.lineTo(-10, 12);
+    ctx.stroke();
+    ctx.strokeStyle = "#3a6a4a";
+    ctx.beginPath();
+    ctx.moveTo(2, 0); ctx.lineTo(10, 12);
+    ctx.stroke();
+    // pivot
+    ctx.fillStyle = "#6a6a6a";
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Petit pot en terre cuite vide, décoratif
+  function drawEmptyPot(ctx, x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    const grad = ctx.createLinearGradient(0, -10, 0, 10);
+    grad.addColorStop(0, "#c97f52");
+    grad.addColorStop(1, "#a8623c");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(-9, -8); ctx.lineTo(9, -8); ctx.lineTo(7, 10); ctx.lineTo(-7, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.fillStyle = "#b8714a";
+    ctx.fillRect(-10, -10, 20, 3);
+    ctx.restore();
+  }
+
+  function drawShelfProps(ctx, w, h, shelfInfo) {
+    const { shelfY, rand } = shelfInfo;
+    const scale = Math.min(w, h) / 320;
+
+    // arrosoir à droite du bonsaï
+    drawWateringCan(ctx, w * 0.84, shelfY - 2, scale * 1.1);
+
+    // petit pot vide à gauche
+    drawEmptyPot(ctx, w * 0.13, shelfY - 3, scale * 0.9);
+
+    // sécateur posé à plat près du pot vide
+    drawPruningShears(ctx, w * 0.16, shelfY - 1, scale * 0.85, -0.15);
+  }
+
+
+  function renderLoop() {
+    if (!visible) return;
+    const dims = resizeCanvas();
+    ctx.clearRect(0, 0, dims.w, dims.h);
+
+    const shelfInfo = drawShelfBackground(ctx, dims.w, dims.h);
+    drawShelfProps(ctx, dims.w, dims.h, shelfInfo);
+
+    const state = Progress.getState();
+    const scale = Math.min(dims.w, dims.h) / 220;
+    Bonsai.draw(ctx, dims.w / 2, shelfInfo.shelfY + 2, scale, state.speciesIndex, state.level);
+
+    animFrame = requestAnimationFrame(renderLoop);
+  }
+
+  function show() {
+    visible = true;
+    refreshHeader();
+    buildSpeciesRow();
+    document.getElementById("garden-overlay").classList.add("visible");
+    if (!animFrame) renderLoop();
+  }
+
+  function hide() {
+    visible = false;
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    document.getElementById("garden-overlay").classList.remove("visible");
+  }
+
+  // Appelé par game.js quand une session se termine (cœur plein)
+  async function onSessionComplete() {
+    const wasComplete = Progress.isCurrentTreeComplete();
+    await Progress.advanceLevel();
+    const isNowComplete = Progress.isCurrentTreeComplete();
+    return { justCompletedTree: !wasComplete && isNowComplete };
+  }
+
+  return { init, show, hide, onSessionComplete, refreshHeader, buildSpeciesRow };
+})();
+
+
+/* ============================================
+   MOD-POPTEXT-001 : Onomatopées visuelles
+   Mots universels (pas de dépendance à une langue) qui apparaissent
+   et s'envolent à chaque bulle éclatée. Plus marqués sur les ricochets.
+   ============================================ */
+
+const PopText = (() => {
+
+  let texts = [];
+
+  // Onomatopées universelles, lisibles sans traduction (BD/manga international)
+  const WORDS_NORMAL = ["POP!", "PAF!", "PLIC!", "TOC!"];
+  const WORDS_CHAIN = ["BAM!", "BOOM!", "WAOUH!", "ZIP!", "PAN!"];
+  const WORDS_BONUS = ["YEAH!", "WOW!", "✦POP✦"];
+
+  function spawn(x, y, kind) {
+    let word, color, baseSize;
+    if (kind === "chain") {
+      word = WORDS_CHAIN[Math.floor(Math.random() * WORDS_CHAIN.length)];
+      color = "#e8853f";
+      baseSize = 26;
+    } else if (kind === "bonus") {
+      word = WORDS_BONUS[Math.floor(Math.random() * WORDS_BONUS.length)];
+      color = "#e8a03f";
+      baseSize = 22;
+    } else {
+      word = WORDS_NORMAL[Math.floor(Math.random() * WORDS_NORMAL.length)];
+      color = "#7fae8a";
+      baseSize = 17;
+    }
+
+    texts.push({
+      id: "POPTXT-" + Math.random().toString(36).slice(2, 7),
+      word,
+      x: x + (Math.random() - 0.5) * 10,
+      y,
+      vy: -0.9 - Math.random() * 0.4,
+      rot: (Math.random() - 0.5) * 0.3,
+      life: 1,
+      color,
+      baseSize
+    });
+  }
+
+  function update(dt) {
+    for (const t of texts) {
+      t.y += t.vy * dt * 0.06;
+      t.life -= dt * 0.0014;
+    }
+    texts = texts.filter(t => t.life > 0);
+  }
+
+  function draw(ctx) {
+    for (const t of texts) {
+      const growIn = Math.min(1, (1 - t.life) * 6); // petit pop d'entrée rapide
+      const scale = 0.6 + growIn * 0.5 + (1 - t.life) * 0.25;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, t.life > 0.7 ? 1 : t.life / 0.7);
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.rot);
+      ctx.scale(scale, scale);
+      ctx.font = "bold " + t.baseSize + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.strokeText(t.word, 0, 0);
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.word, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  function reset() { texts = []; }
+
+  return { spawn, update, draw, reset };
+})();
+
+
+/* ============================================
+   MOD-CALM-001 : Détection de rythme rapide + overlay de respiration
+   Surveille la fréquence des taps/swipes pendant le jeu.
+   Si le rythme est trop soutenu sur une courte fenêtre, propose une pause respiration.
+   ============================================ */
+
+const Calm = (() => {
+
+  const WINDOW_MS = 4000; // fenêtre d'observation du rythme
+  const THRESHOLD_ACTIONS = 9; // nombre d'actions dans la fenêtre déclenchant l'invite
+  const COOLDOWN_MS = 45000; // ne propose plus l'overlay avant ce délai après une fermeture
+
+  let actionTimestamps = [];
+  let lastDismissTime = -Infinity;
+  let active = false;
+
+  // Cycle de respiration : phases en secondes (méthode 4-4-6, douce et accessible)
+  const BREATH_CYCLE = [
+    { label: "Inspire", duration: 4, scaleTo: 1.35 },
+    { label: "Retiens", duration: 4, scaleTo: 1.35 },
+    { label: "Expire", duration: 6, scaleTo: 0.85 },
+  ];
+
+  let phaseIndex = 0;
+  let phaseStart = 0;
+  let cyclesCompleted = 0;
+  let onActivateCallback = null;
+  let onResumeCallback = null;
+
+  function registerAction() {
+    if (active) return; // pas la peine de continuer à compter pendant que l'overlay est affiché
+    const now = performance.now();
+    actionTimestamps.push(now);
+    actionTimestamps = actionTimestamps.filter(t => now - t <= WINDOW_MS);
+
+    if (actionTimestamps.length >= THRESHOLD_ACTIONS && now - lastDismissTime > COOLDOWN_MS) {
+      trigger();
+    }
+  }
+
+  function trigger() {
+    active = true;
+    actionTimestamps = [];
+    phaseIndex = 0;
+    phaseStart = performance.now();
+    cyclesCompleted = 0;
+    if (onActivateCallback) onActivateCallback();
+  }
+
+  function dismiss() {
+    active = false;
+    lastDismissTime = performance.now();
+    if (onResumeCallback) onResumeCallback();
+  }
+
+  function isActive() { return active; }
+
+  function setCallbacks(onActivate, onResume) {
+    onActivateCallback = onActivate;
+    onResumeCallback = onResume;
+  }
+
+  // Avance la phase de respiration ; retourne l'état courant pour le rendu
+  function updateBreathing(dt) {
+    if (!active) return null;
+    const now = performance.now();
+    const elapsed = (now - phaseStart) / 1000;
+    const phase = BREATH_CYCLE[phaseIndex];
+
+    if (elapsed >= phase.duration) {
+      phaseIndex = (phaseIndex + 1) % BREATH_CYCLE.length;
+      if (phaseIndex === 0) cyclesCompleted++;
+      phaseStart = now;
+      return updateBreathing(0); // recalcule immédiatement sur la nouvelle phase
+    }
+
+    const t = elapsed / phase.duration;
+    // easing doux (sinus) plutôt que linéaire, pour une respiration moins mécanique
+    const eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
+
+    const prevPhase = BREATH_CYCLE[(phaseIndex - 1 + BREATH_CYCLE.length) % BREATH_CYCLE.length];
+    const fromScale = prevPhase.scaleTo;
+    const toScale = phase.scaleTo;
+    const currentScale = fromScale + (toScale - fromScale) * eased;
+
+    return {
+      label: phase.label,
+      secondsLeft: Math.ceil(phase.duration - elapsed),
+      scale: currentScale,
+      cyclesCompleted
+    };
+  }
+
+  function reset() {
+    actionTimestamps = [];
+    active = false;
+  }
+
+  return { registerAction, trigger, dismiss, isActive, setCallbacks, updateBreathing, reset };
+})();
+
+
+/* ============================================
+   MOD-MEDITATION-001 : Mode Méditation
+   Deux exercices : respiration guidée (réutilise le cercle visuel),
+   et relaxation musculaire progressive (scan du corps, crâne -> orteils)
+   ============================================ */
+
+const Meditation = (() => {
+
+  let visible = false;
+  let activeExercise = null; // "breathing" | "bodyscan" | null (menu de choix)
+
+  // ---- Relaxation musculaire progressive : étapes du scan corporel ----
+  // Méthode classique : on contracte légèrement chaque groupe musculaire quelques secondes,
+  // puis on relâche complètement en se concentrant sur la sensation de détente.
+  const BODY_SCAN_STEPS = [
+    { zone: "Le crâne et le cuir chevelu", instruction: "Fronce doucement le cuir chevelu, comme pour hausser les sourcils très haut.", holdSec: 5, releaseSec: 8 },
+    { zone: "Le front et les yeux", instruction: "Ferme les yeux fort, plisse le front.", holdSec: 5, releaseSec: 8 },
+    { zone: "La mâchoire et les joues", instruction: "Serre les dents légèrement, contracte les joues.", holdSec: 5, releaseSec: 8 },
+    { zone: "Le cou et la gorge", instruction: "Rentre doucement le menton vers la gorge.", holdSec: 5, releaseSec: 8 },
+    { zone: "Les épaules", instruction: "Remonte les épaules vers les oreilles.", holdSec: 5, releaseSec: 8 },
+    { zone: "Les bras et les avant-bras", instruction: "Serre les poings, contracte les avant-bras.", holdSec: 5, releaseSec: 8 },
+    { zone: "Les mains et les doigts", instruction: "Serre les poings très fort.", holdSec: 5, releaseSec: 8 },
+    { zone: "La poitrine", instruction: "Inspire profondément et retiens en gonflant la poitrine.", holdSec: 5, releaseSec: 8 },
+    { zone: "Le ventre", instruction: "Contracte les muscles du ventre, comme pour un petit effort.", holdSec: 5, releaseSec: 8 },
+    { zone: "Le dos", instruction: "Cambre légèrement le dos, rapproche les omoplates.", holdSec: 5, releaseSec: 8 },
+    { zone: "Les fessiers", instruction: "Contracte les fessiers.", holdSec: 5, releaseSec: 8 },
+    { zone: "Les cuisses", instruction: "Contracte les muscles des cuisses.", holdSec: 5, releaseSec: 8 },
+    { zone: "Les mollets", instruction: "Pointe les orteils vers toi pour contracter les mollets.", holdSec: 5, releaseSec: 8 },
+    { zone: "Les pieds et les orteils", instruction: "Recroqueville les orteils vers le bas.", holdSec: 5, releaseSec: 8 },
+    { zone: "Le corps entier", instruction: "Laisse maintenant chaque muscle, du crâne aux orteils, complètement détendu.", holdSec: 0, releaseSec: 14 },
+  ];
+
+  let scanStepIndex = 0;
+  let scanPhase = "hold"; // "hold" | "release"
+  let scanPhaseStart = 0;
+  let onCloseCallback = null;
+
+  function init(onClose) {
+    onCloseCallback = onClose;
+  }
+
+  function show() {
+    visible = true;
+    activeExercise = null;
+  }
+
+  function hide() {
+    visible = false;
+    activeExercise = null;
+    if (onCloseCallback) onCloseCallback();
+  }
+
+  function isVisible() { return visible; }
+
+  function startBreathing() {
+    activeExercise = "breathing";
+  }
+
+  function startBodyScan() {
+    activeExercise = "bodyscan";
+    scanStepIndex = 0;
+    scanPhase = BODY_SCAN_STEPS[0].holdSec > 0 ? "hold" : "release";
+    scanPhaseStart = performance.now();
+  }
+
+  function backToMenu() {
+    activeExercise = null;
+  }
+
+  function getActiveExercise() { return activeExercise; }
+
+  // ---- Logique du scan corporel : avance automatiquement de phase en phase, étape en étape ----
+  function updateBodyScan() {
+    if (activeExercise !== "bodyscan") return null;
+    const step = BODY_SCAN_STEPS[scanStepIndex];
+    const now = performance.now();
+    const elapsed = (now - scanPhaseStart) / 1000;
+    const duration = scanPhase === "hold" ? step.holdSec : step.releaseSec;
+
+    if (elapsed >= duration) {
+      if (scanPhase === "hold") {
+        scanPhase = "release";
+        scanPhaseStart = now;
+      } else {
+        // passe à l'étape suivante
+        if (scanStepIndex < BODY_SCAN_STEPS.length - 1) {
+          scanStepIndex++;
+          const nextStep = BODY_SCAN_STEPS[scanStepIndex];
+          scanPhase = nextStep.holdSec > 0 ? "hold" : "release";
+          scanPhaseStart = now;
+        } else {
+          // séance terminée
+          return { finished: true };
+        }
+      }
+    }
+
+    const currentStep = BODY_SCAN_STEPS[scanStepIndex];
+    const currentDuration = scanPhase === "hold" ? currentStep.holdSec : currentStep.releaseSec;
+    const phaseElapsed = (performance.now() - scanPhaseStart) / 1000;
+
+    return {
+      finished: false,
+      stepIndex: scanStepIndex,
+      totalSteps: BODY_SCAN_STEPS.length,
+      zone: currentStep.zone,
+      instruction: currentStep.instruction,
+      phase: scanPhase, // "hold" ou "release"
+      secondsLeft: Math.max(0, Math.ceil(currentDuration - phaseElapsed)),
+      phaseDuration: currentDuration
+    };
+  }
+
+  function skipToNextStep() {
+    if (scanStepIndex < BODY_SCAN_STEPS.length - 1) {
+      scanStepIndex++;
+      const nextStep = BODY_SCAN_STEPS[scanStepIndex];
+      scanPhase = nextStep.holdSec > 0 ? "hold" : "release";
+      scanPhaseStart = performance.now();
+    }
+  }
+
+  function getBodyScanStepCount() { return BODY_SCAN_STEPS.length; }
+
+  return {
+    init, show, hide, isVisible,
+    startBreathing, startBodyScan, backToMenu, getActiveExercise,
+    updateBodyScan, skipToNextStep, getBodyScanStepCount
+  };
+})();
+
+
+/* ============================================
+   MOD-GAME-001 : Boucle principale, score, session
+   Orchestré : Scenery + Bubbles + Quotes
+   Durée de session fixe (zen, sans game over) -> carte finale
+   ============================================ */
+
+(function () {
+  const canvas = document.getElementById("game-canvas");
+  const ctx = canvas.getContext("2d");
+
+  const scoreDisplay = document.getElementById("score-display");
+  const comboDisplay = document.getElementById("combo-display");
+
+  const startOverlay = document.getElementById("start-overlay");
+  const startPlayBtn = document.getElementById("start-play");
+
+  const endReplayBtn = document.getElementById("end-card-replay");
+
+  const BUBBLES_TO_FILL_HEART = 35; // nombre de pops pour remplir le cœur et finir la session
+  let elapsedMs = 0;
+  let score = 0;
+  let comboCount = 0;
+  let comboTimer = 0;
+  let lastQuoteId = null;
+
+  let running = false;
+  let sessionEnded = false;
+  let revealingTree = false;
+  let revealProgress = 0;
+  let treeStateAtReveal = null; // {speciesIndex, levelBefore, levelAfter, treeName, treeJp}
+  let currentQuote = null;
+  let lastFrameTime = 0;
+
+  let particles = []; // petites étincelles au pop, géré ici (léger, pas besoin de module séparé)
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    Scenery.resize(rect.width, rect.height);
+    Bubbles.resize(rect.width, rect.height);
+    return { w: rect.width, h: rect.height };
+  }
+
+  let viewW = 0, viewH = 0;
+
+  function onPop(bubble, isChainHit) {
+    const now = performance.now();
+    if (now - comboTimer < 900) {
+      comboCount++;
+    } else {
+      comboCount = 1;
+    }
+    comboTimer = now;
+
+    // Un hit en chaîne (rebond du projectile) applique un multiplicateur x5 sur (base + combo)
+    const base = isChainHit ? 20 : (bubble.isBonus ? 25 : 10);
+    const comboBonus = comboCount > 1 ? (comboCount - 1) * 4 : 0;
+    const subtotal = base + comboBonus;
+    const gained = isChainHit ? subtotal * 5 : subtotal;
+    score += gained;
+    scoreDisplay.textContent = score;
+
+    if (comboCount > 1) {
+      comboDisplay.textContent = "Combo x" + comboCount;
+      comboDisplay.classList.add("show");
+      clearTimeout(comboDisplay._hideTimeout);
+      comboDisplay._hideTimeout = setTimeout(() => comboDisplay.classList.remove("show"), 1000);
+    }
+
+    spawnParticles(bubble.x, bubble.y, bubble.color, bubble.isBonus);
+    Heart.registerPop();
+
+    const kind = isChainHit ? "chain" : (bubble.isBonus ? "bonus" : "normal");
+    PopText.spawn(bubble.x, bubble.y - bubble.radius, kind);
+  }
+
+  function spawnParticles(x, y, color, isBonus) {
+    const count = isBonus ? 14 : 8;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+      const speed = 1 + Math.random() * 2;
+      particles.push({
+        id: "PRT-" + Math.random().toString(36).slice(2, 6),
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        size: 2 + Math.random() * 2.5,
+        color
+      });
+    }
+  }
+
+  function updateParticles(dt) {
+    for (const p of particles) {
+      p.x += p.vx * dt * 0.05;
+      p.y += p.vy * dt * 0.05;
+      p.vy += 0.002 * dt;
+      p.life -= dt * 0.0018;
+    }
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function drawParticles(ctx) {
+    for (const p of particles) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function gameLoop(timestamp) {
+    if (!running && !sessionEnded) return;
+    const dt = lastFrameTime ? Math.min(timestamp - lastFrameTime, 50) : 16;
+    lastFrameTime = timestamp;
+    if (!Calm.isActive()) elapsedMs += dt;
+
+    // Background gradient (subtil, statique pour perf)
+    ctx.clearRect(0, 0, viewW, viewH);
+    const grad = ctx.createLinearGradient(0, 0, 0, viewH);
+    grad.addColorStop(0, "#dceadd");
+    grad.addColorStop(1, "#f4f1e8");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, viewW, viewH);
+
+    Scenery.update(dt);
+    Scenery.draw(ctx);
+
+    if (running && !Calm.isActive()) {
+      Bubbles.update(dt, elapsedMs);
+      Bubbles.draw(ctx);
+
+      updateParticles(dt);
+      drawParticles(ctx);
+
+      PopText.update(dt);
+      PopText.draw(ctx);
+
+      Heart.update(dt);
+      Heart.draw(ctx, viewW - 46, 50);
+    } else if (running && Calm.isActive()) {
+      // jeu figé : on affiche l'état actuel sans le faire avancer, juste pour garder le décor visible derrière l'overlay
+      Bubbles.draw(ctx);
+      drawParticles(ctx);
+      PopText.draw(ctx);
+      Heart.draw(ctx, viewW - 46, 50);
+    }
+
+    if (sessionEnded && !revealingTree) {
+      Scroll.update(dt);
+      Scroll.draw(ctx, viewW / 2, viewH / 2, Math.min(viewW - 50, 320), currentQuote, score);
+      if (Scroll.getAppearProgress() > 0.85 && !endReplayBtn.classList.contains("visible") && treeStateAtReveal) {
+        endReplayBtn.classList.add("visible");
+        endReplayBtn.textContent = "Continuer";
+        endReplayBtn.style.left = "50%";
+        endReplayBtn.style.top = (viewH / 2 + 150) + "px";
+        endReplayBtn.style.transform = "translateX(-50%)";
+      }
+    }
+
+    if (revealingTree) {
+      drawTreeReveal(ctx, dt);
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function drawTreeReveal(ctx, dt) {
+    if (!treeStateAtReveal) return; // la progression n'a pas encore fini de se résoudre, on attend la frame suivante
+
+    revealProgress = Math.min(1, revealProgress + dt * 0.0009);
+
+    // petit fond doux derrière l'arbre pour le mettre en valeur
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, revealProgress * 2);
+    const vign = ctx.createRadialGradient(viewW / 2, viewH * 0.55, 10, viewW / 2, viewH * 0.55, viewW * 0.7);
+    vign.addColorStop(0, "rgba(255,250,230,0.9)");
+    vign.addColorStop(1, "rgba(255,250,230,0)");
+    ctx.fillStyle = vign;
+    ctx.fillRect(0, 0, viewW, viewH);
+    ctx.restore();
+
+    const scale = Math.min(viewW, viewH) / 220;
+    // une vraie nouvelle feuille n'apparaît que si cette session a fait franchir un palier
+    // (10 niveaux = 1 feuille) ; sinon on montre juste l'arbre tel quel, sans halo trompeur
+    const leavesBefore = Bonsai.levelToLeafCount(treeStateAtReveal.levelBefore);
+    const leavesAfter = Bonsai.levelToLeafCount(treeStateAtReveal.levelAfter);
+    const gainedLeaf = leavesAfter > leavesBefore;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, revealProgress * 1.5);
+    Bonsai.draw(
+      ctx, viewW / 2, viewH * 0.62, scale * 1.3,
+      treeStateAtReveal.speciesIndex, treeStateAtReveal.levelAfter,
+      gainedLeaf ? revealProgress : null
+    );
+    ctx.restore();
+
+    // texte d'accompagnement, adapté selon qu'une feuille soit vraiment apparue ou non
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, Math.max(0, (revealProgress - 0.3) * 2));
+    ctx.fillStyle = "#5a6a5a";
+    ctx.font = "15px sans-serif";
+    ctx.textAlign = "center";
+    const mainText = gainedLeaf
+      ? treeStateAtReveal.treeName + " a gagné une feuille"
+      : treeStateAtReveal.treeName + " continue de grandir";
+    ctx.fillText(mainText, viewW / 2, viewH * 0.18);
+    ctx.font = "italic 12px sans-serif";
+    ctx.fillStyle = "#8a9a8a";
+    ctx.fillText(
+      treeStateAtReveal.treeJp + " · " + leavesAfter + " / " + Bonsai.getLeafCount() + " feuilles",
+      viewW / 2, viewH * 0.18 + 20
+    );
+    ctx.restore();
+
+    if (revealProgress >= 1 && !endReplayBtn.classList.contains("visible")) {
+      endReplayBtn.classList.add("visible");
+      endReplayBtn.textContent = "Rejouer";
+      endReplayBtn.style.left = "50%";
+      endReplayBtn.style.top = (viewH * 0.62 + 130) + "px";
+      endReplayBtn.style.transform = "translateX(-50%)";
+    }
+  }
+
+  function startSession() {
+    score = 0;
+    comboCount = 0;
+    elapsedMs = 0;
+    particles = [];
+    scoreDisplay.textContent = "0";
+    sessionEnded = false;
+    revealingTree = false;
+    revealProgress = 0;
+    currentQuote = null;
+
+    const dims = resizeCanvas();
+    viewW = dims.w; viewH = dims.h;
+
+    const activeSpecies = Bonsai.getSpecies(Progress.getState().speciesIndex);
+    const IMPLEMENTED_THEMES = ["day", "moonlit"]; // les autres (mountain, oasis, rain, snow) arriveront ensuite
+    const themeToUse = IMPLEMENTED_THEMES.includes(activeSpecies.gameTheme) ? activeSpecies.gameTheme : "day";
+
+    Scenery.init(viewW, viewH, themeToUse);
+    Bubbles.reset();
+    Bubbles.init(viewW, viewH, onPop);
+    Heart.init(BUBBLES_TO_FILL_HEART, endSession);
+    Heart.setExplosionCenter(viewW / 2, viewH / 2);
+    Scroll.hide();
+    PopText.reset();
+    Calm.reset();
+
+    startOverlay.classList.add("hidden");
+    endReplayBtn.classList.remove("visible");
+
+    running = true;
+    lastFrameTime = 0;
+    requestAnimationFrame(gameLoop);
+  }
+
+  function endSession() {
+    running = false;
+    sessionEnded = true;
+    revealingTree = false;
+    revealProgress = 0;
+    treeStateAtReveal = null;
+    const quote = getRandomQuote(lastQuoteId);
+    lastQuoteId = quote.id;
+    currentQuote = quote;
+    Scroll.show();
+
+    // Capture l'état du bonsaï avant progression, puis fait avancer le niveau (1 session = 1 niveau)
+    const stateBefore = Progress.getState();
+    const speciesIndex = stateBefore.speciesIndex;
+    const levelBefore = stateBefore.level;
+    const sp = Bonsai.getSpecies(speciesIndex);
+
+    Garden.onSessionComplete().then(result => {
+      const stateAfter = Progress.getState();
+      treeStateAtReveal = {
+        speciesIndex,
+        levelBefore,
+        levelAfter: stateAfter.level,
+        treeName: sp.name,
+        treeJp: sp.nameJp
+      };
+      if (result.justCompletedTree) {
+        currentQuote = {
+          text: currentQuote.text,
+          author: currentQuote.author + " — ton arbre a atteint sa pleine maturité 🌳"
+        };
+      }
+    });
+  }
+
+  // ---- Input handling (tap + swipe) ----
+  let touchStart = null;
+  let touchMoved = false;
+
+  function getPos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const t = evt.touches ? evt.touches[0] : evt;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+
+  canvas.addEventListener("touchstart", (e) => {
+    if (!running || Calm.isActive()) return;
+    touchStart = getPos(e);
+    touchMoved = false;
+  }, { passive: true });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (!running || !touchStart || Calm.isActive()) return;
+    touchMoved = true;
+    const pos = getPos(e);
+    Bubbles.handleSwipe(touchStart.x, touchStart.y, pos.x, pos.y);
+    touchStart = pos;
+  }, { passive: true });
+
+  canvas.addEventListener("touchend", (e) => {
+    if (!running || !touchStart || Calm.isActive()) return;
+    if (!touchMoved) {
+      Bubbles.handleTap(touchStart.x, touchStart.y);
+    }
+    Calm.registerAction();
+    touchStart = null;
+  }, { passive: true });
+
+  // Souris (test desktop)
+  let mouseDown = false;
+  canvas.addEventListener("mousedown", (e) => {
+    if (!running || Calm.isActive()) return;
+    mouseDown = true;
+    touchStart = getPos(e);
+    touchMoved = false;
+  });
+  canvas.addEventListener("mousemove", (e) => {
+    if (!running || !mouseDown || !touchStart || Calm.isActive()) return;
+    touchMoved = true;
+    const pos = getPos(e);
+    Bubbles.handleSwipe(touchStart.x, touchStart.y, pos.x, pos.y);
+    touchStart = pos;
+  });
+  canvas.addEventListener("mouseup", (e) => {
+    if (!running || !touchStart || Calm.isActive()) return;
+    if (!touchMoved) Bubbles.handleTap(touchStart.x, touchStart.y);
+    Calm.registerAction();
+    mouseDown = false;
+    touchStart = null;
+  });
+
+  window.addEventListener("resize", () => {
+    if (running) {
+      const dims = resizeCanvas();
+      viewW = dims.w; viewH = dims.h;
+    }
+  });
+
+  startPlayBtn.addEventListener("click", startSession);
+  endReplayBtn.addEventListener("click", () => {
+    if (sessionEnded && !revealingTree) {
+      // phase parchemin -> on passe à la révélation de l'arbre
+      revealingTree = true;
+      revealProgress = 0;
+      endReplayBtn.classList.remove("visible");
+    } else {
+      // phase révélation déjà vue -> on relance une nouvelle session
+      startSession();
+    }
+  });
+
+  const startGardenBtn = document.getElementById("start-garden-btn");
+  const gardenBackBtn = document.getElementById("garden-back-btn");
+  startGardenBtn.addEventListener("click", () => Garden.show());
+  gardenBackBtn.addEventListener("click", () => Garden.hide());
+
+  // ---- Overlay de respiration apaisante (MOD-CALM-001) ----
+  const calmOverlay = document.getElementById("calm-overlay");
+  const calmCircle = document.getElementById("calm-circle");
+  const calmPhaseLabel = document.getElementById("calm-phase-label");
+  const calmPhaseSeconds = document.getElementById("calm-phase-seconds");
+  const calmResumeBtn = document.getElementById("calm-resume-btn");
+  const calmCyclesLabel = document.getElementById("calm-cycles-label");
+
+  let calmAnimFrame = null;
+  const MIN_CYCLES_BEFORE_RESUME = 2; // au moins 2 cycles complets avant de pouvoir reprendre
+
+  function calmLoop() {
+    const state = Calm.updateBreathing(16);
+    if (!state) return; // l'overlay a été fermé entre-temps
+
+    calmPhaseLabel.textContent = state.label;
+    calmPhaseSeconds.textContent = state.secondsLeft;
+    calmCircle.style.transform = "scale(" + state.scale + ")";
+
+    if (state.cyclesCompleted >= MIN_CYCLES_BEFORE_RESUME) {
+      calmResumeBtn.classList.add("ready");
+      calmCyclesLabel.textContent = "Tu peux reprendre quand tu es prêt";
+    } else {
+      const remaining = MIN_CYCLES_BEFORE_RESUME - state.cyclesCompleted;
+      calmCyclesLabel.textContent = remaining + " cycle" + (remaining > 1 ? "s" : "") + " avant de pouvoir reprendre";
+    }
+
+    calmAnimFrame = requestAnimationFrame(calmLoop);
+  }
+
+  Calm.setCallbacks(
+    () => {
+      // activation : affiche l'overlay et démarre la boucle d'animation
+      calmOverlay.classList.add("visible");
+      calmResumeBtn.classList.remove("ready");
+      calmLoop();
+    },
+    () => {
+      // reprise : masque l'overlay et arrête la boucle
+      calmOverlay.classList.remove("visible");
+      if (calmAnimFrame) { cancelAnimationFrame(calmAnimFrame); calmAnimFrame = null; }
+    }
+  );
+
+  calmResumeBtn.addEventListener("click", () => {
+    if (!calmResumeBtn.classList.contains("ready")) return;
+    Calm.dismiss();
+  });
+
+  // ---- Mode Méditation (MOD-MEDITATION-001) ----
+  const startMeditationBtn = document.getElementById("start-meditation-btn");
+  const meditationOverlay = document.getElementById("meditation-overlay");
+  const meditationBackBtn = document.getElementById("meditation-back-btn");
+  const meditationMenu = document.getElementById("meditation-menu");
+  const meditationExerciseView = document.getElementById("meditation-exercise-view");
+  const medChoiceBreathing = document.getElementById("med-choice-breathing");
+  const medChoiceBodyscan = document.getElementById("med-choice-bodyscan");
+  const medBreathContainer = document.getElementById("med-breath-container");
+  const medScanContainer = document.getElementById("med-scan-container");
+  const medBreathCircle = document.getElementById("med-breath-circle");
+  const medBreathPhaseLabel = document.getElementById("med-breath-phase-label");
+  const medBreathPhaseSeconds = document.getElementById("med-breath-phase-seconds");
+  const medScanProgress = document.getElementById("med-scan-progress");
+  const medScanZone = document.getElementById("med-scan-zone");
+  const medScanInstruction = document.getElementById("med-scan-instruction");
+  const medScanPhaseBadge = document.getElementById("med-scan-phase-badge");
+  const medScanSeconds = document.getElementById("med-scan-seconds");
+  const medScanSkip = document.getElementById("med-scan-skip");
+  const medScanFinished = document.getElementById("med-scan-finished");
+  const medScanRestart = document.getElementById("med-scan-restart");
+
+  let medAnimFrame = null;
+  // Réutilise le même cycle de respiration que Calm, via une instance de calcul indépendante
+  // (on duplique une petite logique locale pour ne pas coupler Meditation à l'état de Calm)
+  const MED_BREATH_CYCLE = [
+    { label: "Inspire", duration: 4, scaleTo: 1.35 },
+    { label: "Retiens", duration: 4, scaleTo: 1.35 },
+    { label: "Expire", duration: 6, scaleTo: 0.85 },
+  ];
+  let medBreathPhaseIndex = 0;
+  let medBreathPhaseStart = 0;
+
+  function updateMedBreathing() {
+    const now = performance.now();
+    const elapsed = (now - medBreathPhaseStart) / 1000;
+    const phase = MED_BREATH_CYCLE[medBreathPhaseIndex];
+    if (elapsed >= phase.duration) {
+      medBreathPhaseIndex = (medBreathPhaseIndex + 1) % MED_BREATH_CYCLE.length;
+      medBreathPhaseStart = now;
+    }
+    const updatedPhase = MED_BREATH_CYCLE[medBreathPhaseIndex];
+    const updatedElapsed = (performance.now() - medBreathPhaseStart) / 1000;
+    const t = Math.min(1, updatedElapsed / updatedPhase.duration);
+    const eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
+    const prevPhase = MED_BREATH_CYCLE[(medBreathPhaseIndex - 1 + MED_BREATH_CYCLE.length) % MED_BREATH_CYCLE.length];
+    const scale = prevPhase.scaleTo + (updatedPhase.scaleTo - prevPhase.scaleTo) * eased;
+
+    medBreathPhaseLabel.textContent = updatedPhase.label;
+    medBreathPhaseSeconds.textContent = Math.ceil(updatedPhase.duration - updatedElapsed);
+    medBreathCircle.style.transform = "scale(" + scale + ")";
+  }
+
+  function medLoop() {
+    if (!Meditation.isVisible()) return;
+    const exercise = Meditation.getActiveExercise();
+
+    if (exercise === "breathing") {
+      updateMedBreathing();
+    } else if (exercise === "bodyscan") {
+      const state = Meditation.updateBodyScan();
+      if (state) {
+        if (state.finished) {
+          medScanContainer.querySelectorAll(":scope > *:not(#med-scan-finished)").forEach(el => el.style.display = "none");
+          medScanFinished.classList.add("visible");
+        } else {
+          medScanProgress.textContent = "Étape " + (state.stepIndex + 1) + " / " + state.totalSteps;
+          medScanZone.textContent = state.zone;
+          medScanInstruction.textContent = state.instruction;
+          medScanSeconds.textContent = state.secondsLeft;
+          medScanPhaseBadge.textContent = state.phase === "hold" ? "Contracte" : "Relâche et ressens";
+          medScanPhaseBadge.className = state.phase;
+        }
+      }
+    }
+
+    medAnimFrame = requestAnimationFrame(medLoop);
+  }
+
+  function showMeditationExercise(exercise) {
+    meditationMenu.style.display = "none";
+    meditationExerciseView.classList.add("visible");
+    medBreathContainer.style.display = exercise === "breathing" ? "flex" : "none";
+    medScanContainer.style.display = exercise === "bodyscan" ? "flex" : "none";
+
+    if (exercise === "breathing") {
+      medBreathPhaseIndex = 0;
+      medBreathPhaseStart = performance.now();
+    } else if (exercise === "bodyscan") {
+      medScanFinished.classList.remove("visible");
+      medScanContainer.querySelectorAll(":scope > *:not(#med-scan-finished)").forEach(el => el.style.display = "");
+    }
+
+    if (medAnimFrame) cancelAnimationFrame(medAnimFrame);
+    medLoop();
+  }
+
+  function showMeditationMenu() {
+    meditationMenu.style.display = "flex";
+    meditationExerciseView.classList.remove("visible");
+    if (medAnimFrame) { cancelAnimationFrame(medAnimFrame); medAnimFrame = null; }
+  }
+
+  startMeditationBtn.addEventListener("click", () => {
+    Meditation.show();
+    showMeditationMenu();
+    meditationOverlay.classList.add("visible");
+  });
+
+  meditationBackBtn.addEventListener("click", () => {
+    if (Meditation.getActiveExercise()) {
+      Meditation.backToMenu();
+      showMeditationMenu();
+    } else {
+      Meditation.hide();
+      meditationOverlay.classList.remove("visible");
+    }
+  });
+
+  medChoiceBreathing.addEventListener("click", () => {
+    Meditation.startBreathing();
+    showMeditationExercise("breathing");
+  });
+
+  medChoiceBodyscan.addEventListener("click", () => {
+    Meditation.startBodyScan();
+    showMeditationExercise("bodyscan");
+  });
+
+  medScanSkip.addEventListener("click", () => Meditation.skipToNextStep());
+
+  medScanRestart.addEventListener("click", () => {
+    Meditation.startBodyScan();
+    showMeditationExercise("bodyscan");
+  });
+
+  Meditation.init(() => {
+    // callback de fermeture : rien de spécial à nettoyer côté jeu, le mode est autonome
+  });
+
+  // Affichage initial (décor visible derrière l'écran de démarrage)
+  resizeCanvas();
+
+  // Initialisation de la progression du jardin (chargement asynchrone depuis le storage)
+  Garden.init();
+  Progress.load();
+})();
+
+</script>
+</body>
+</html>
