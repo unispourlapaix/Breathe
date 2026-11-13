@@ -17,17 +17,42 @@
   const encouragementLanguageKey = "breathe-encouragement-language";
   try {
     const savedLanguage = localStorage.getItem(encouragementLanguageKey);
-    if (ENCOURAGEMENT_LANGUAGES.includes(savedLanguage)) encouragementLanguage.value = savedLanguage;
+    if (savedLanguage === "fr" || ENCOURAGEMENT_LANGUAGES.includes(savedLanguage)) {
+      encouragementLanguage.value = savedLanguage;
+    }
   } catch {
     // Le choix reste disponible pour la session si le stockage est bloqué.
   }
   encouragementLanguage.addEventListener("change", () => {
+    translateStartMenu();
     try {
       localStorage.setItem(encouragementLanguageKey, encouragementLanguage.value);
     } catch {
       // Le choix reste disponible pour la session.
     }
   });
+
+  const startMenuTranslations = {
+    fr: ["Respire. Éclate. Récolte la sagesse.", "Commencer", "Mon Jardin", "Mode Méditation", "Langue", "Tape les bulles douces.", "Glisse sur les bulles dorées."],
+    en: ["Breathe. Pop bubbles. Gather wisdom.", "Start", "My Garden", "Meditation Mode", "Language", "Tap the soft bubbles.", "Swipe across the golden bubbles."],
+    ja: ["深呼吸して、泡をはじいて、知恵を集めよう。", "はじめる", "私の庭", "瞑想モード", "言語", "やわらかい泡をタップ。", "金色の泡をスワイプ。"],
+    es: ["Respira. Explota burbujas. Recoge sabiduría.", "Empezar", "Mi jardín", "Modo meditación", "Idioma", "Toca las burbujas suaves.", "Desliza sobre las burbujas doradas."],
+    pt: ["Respire. Estoure bolhas. Colha sabedoria.", "Começar", "Meu jardim", "Modo meditação", "Idioma", "Toque nas bolhas suaves.", "Deslize sobre as bolhas douradas."]
+  };
+
+  function translateStartMenu() {
+    const language = encouragementLanguage.value;
+    const [subtitle, play, garden, meditation, label, tap, swipe] = startMenuTranslations[language];
+    document.getElementById("start-overlay").lang = language;
+    document.getElementById("start-sub").textContent = subtitle;
+    document.getElementById("start-play").textContent = play;
+    document.getElementById("start-garden-btn").textContent = garden;
+    document.getElementById("start-meditation-btn").textContent = meditation;
+    encouragementLanguage.setAttribute("aria-label", label);
+    document.getElementById("start-hint").replaceChildren(tap, document.createElement("br"), swipe);
+  }
+
+  translateStartMenu();
   let encouragementTimer;
   let lastEncouragement = -1;
 
@@ -105,7 +130,7 @@
       ? Math.floor(Math.random() * count)
       : (lastEncouragement + offset) % count;
     const [french, english] = ENCOURAGEMENTS[lastEncouragement];
-    const language = encouragementLanguage.value;
+    const language = encouragementLanguage.value === "fr" ? "en" : encouragementLanguage.value;
     const translationIndex = ENCOURAGEMENT_LANGUAGES.indexOf(language) - 1;
     encouragementFr.textContent = french;
     encouragementTranslation.textContent = ENCOURAGEMENT_TRANSLATIONS[lastEncouragement][translationIndex] ?? english;

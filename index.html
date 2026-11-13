@@ -51,10 +51,15 @@
     text-align:center; font-size:14px; box-shadow:0 3px 14px #32254233;
   }
   #encouragement-translation { display:block; margin-top:3px; font-size:12px; }
-  #encouragement-language-label { margin-top:12px; color:#536754; font-size:12px; }
+  #encouragement-language-label {
+    margin-top:12px; width:24px; height:16px; flex:none;
+    background:linear-gradient(90deg,#173d91 0 33.33%,#fff 33.33% 66.66%,#e43247 66.66%);
+    box-shadow:0 1px 3px #183b3080; cursor:pointer;
+  }
   #encouragement-language {
-    margin-top:4px; padding:6px 10px; border:1px solid #9bb89b;
-    border-radius:12px; background:#f8fbf8; color:#455b46; font:inherit;
+    margin-top:4px; padding:8px 14px; min-height:40px;
+    --facet-light:#f7d98f; --facet-base:#e7bc60; --facet-edge:#9b7134;
+    font:inherit; font-weight:600;
   }
 
   /* ---- Carte fin de partie (MOD-CARD-001) ---- */
@@ -265,26 +270,75 @@
     background: linear-gradient(180deg,#dceadd,#eef3ee 60%);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     z-index:30; transition: opacity 0.5s ease;
+    isolation:isolate; overflow:hidden; padding:14px;
   }
   #start-overlay.hidden { opacity:0; pointer-events:none; }
-  #start-title { font-size:32px; color:#5a6a5a; margin-bottom:6px; letter-spacing:1px; }
-  #start-sub { font-size:14px; color:#8a9a8a; margin-bottom:36px; }
+  #start-landscape, #start-bubbles {
+    position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
+  }
+  #start-landscape { object-fit:cover; z-index:-2; }
+  #start-bubbles { z-index:-1; }
+  #start-bubbles span {
+    position:absolute; top:100%; left:var(--x); width:var(--size); aspect-ratio:1;
+    clip-path:polygon(28% 4%,73% 0,98% 30%,94% 75%,64% 100%,21% 91%,0 56%,5% 25%);
+    background:radial-gradient(ellipse at 29% 24%,#fff9 0 9%,transparent 16%),
+      linear-gradient(145deg,#fff9,var(--color,#bcd9c8) 58%,#76ab9b);
+    opacity:0; animation:menu-bubble-rise var(--duration) var(--delay) linear infinite;
+  }
+  @keyframes menu-bubble-rise {
+    0% { transform:translateY(0) rotate(-12deg); opacity:0; }
+    12%, 86% { opacity:.80; }
+    48% { transform:translate(13px,-54dvh) rotate(10deg); }
+    100% { transform:translate(-6px,-112dvh) rotate(28deg); opacity:0; }
+  }
+  #start-overlay.hidden #start-bubbles span { animation-play-state:paused; }
+  #start-panel {
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    width:min(100%,315px); max-height:100%; overflow:auto; touch-action:pan-y;
+    padding:22px 14px 16px;
+  }
+  #start-title { font:700 clamp(32px,10vw,51px)/1.1 Georgia,serif; color:#214c41; margin-bottom:6px; }
+  #start-sub { font-size:14px; color:#3f6455; margin-bottom:20px; }
+  #start-title, #start-sub, #start-hint, #encouragement-language-label {
+    color:#183b30; text-shadow:0 0 6px #fff9e5,0 0 12px #fff9e5;
+  }
+  #start-panel button, #encouragement-language {
+    border:0; cursor:pointer;
+    color:#29483e; text-shadow:0 1px 0 #fff9;
+    clip-path:polygon(9% 3%,77% 0,96% 15%,100% 58%,91% 97%,22% 100%,3% 84%,0 35%);
+    background:
+      linear-gradient(to bottom,#23382b80,transparent 6px),
+      linear-gradient(to top,#fff9 0 2px,transparent 4px),
+      radial-gradient(ellipse at 20% 30%,#fffc 0 4%,transparent 13%),
+      repeating-linear-gradient(172deg,transparent 0 8px,#fff1 9px,transparent 12px 21px),
+      linear-gradient(150deg,var(--facet-light) 0 19%,transparent 20%),
+      linear-gradient(23deg,var(--facet-edge) 0 17%,var(--facet-base) 18% 77%,var(--facet-light) 78%);
+  }
+  #start-panel button:focus-visible, #encouragement-language:focus-visible {
+    outline:0; box-shadow:inset 0 0 0 5px #f9cf62;
+  }
+  #start-panel button:active { filter:brightness(.91); }
   #start-play {
-    background:#9bb89b; color:white; border:none; border-radius:30px;
+    --facet-light:#d8e8e0; --facet-base:#bcd9c8; --facet-edge:#8fb49f;
     padding:16px 48px; font-size:17px; font-weight:600;
-    box-shadow:0 8px 20px rgba(155,184,155,0.4);
     margin-bottom:14px;
   }
   #start-garden-btn {
-    background:transparent; color:#6a8a6a; border:2px solid #9bb89b; border-radius:30px;
+    --facet-light:#e5eee4; --facet-base:#cfe3d4; --facet-edge:#9fc1ab;
     padding:12px 40px; font-size:15px; font-weight:600;
     margin-bottom:10px;
   }
   #start-meditation-btn {
-    background:transparent; color:#8a7a9a; border:2px solid #b8a8d0; border-radius:30px;
+    --facet-light:#d8e8e0; --facet-base:#b8d4cf; --facet-edge:#87afa8;
     padding:12px 40px; font-size:15px; font-weight:600;
   }
-  #start-hint { margin-top:24px; font-size:12px; color:#a0a0a0; text-align:center; padding:0 40px; line-height:1.6; }
+  #encouragement-language option { color:#283a2d; background:#f5f5e9; }
+  #encouragement-language { color:#4b3515; }
+  #start-hint { margin-top:12px; font-size:12px; line-height:1.5; }
+  @media (prefers-reduced-motion:reduce) {
+    #start-bubbles span { animation:none; top:var(--still); opacity:.72; }
+    #start-overlay { transition:none; }
+  }
 </style>
 </head>
 <body>
@@ -301,19 +355,32 @@
   </div>
 
   <div id="start-overlay">
+    <img id="start-landscape" src="assets/jardin-bambou.webp" alt="">
+    <div id="start-bubbles" aria-hidden="true">
+      <span style="--x:7%;--size:43px;--duration:13s;--delay:-4s;--still:24%"></span>
+      <span style="--x:83%;--size:55px;--duration:17s;--delay:-2s;--still:79%;--color:#f3d27a"></span>
+      <span style="--x:19%;--size:28px;--duration:12s;--delay:-8s;--still:10%"></span>
+      <span style="--x:74%;--size:36px;--duration:15s;--delay:-11s;--still:13%"></span>
+      <span style="--x:3%;--size:28px;--duration:14s;--delay:-10s;--still:74%"></span>
+      <span style="--x:87%;--size:32px;--duration:14s;--delay:-7s;--still:29%"></span>
+      <span style="--x:42%;--size:50px;--duration:18s;--delay:-5s;--still:87%"></span>
+    </div>
+    <div id="start-panel">
     <div id="start-title">禅 Breathe</div>
     <div id="start-sub">Respire. Éclate. Récolte la sagesse.</div>
     <button id="start-play">Commencer</button>
-    <button id="start-garden-btn">🌳 Mon Jardin</button>
-    <button id="start-meditation-btn">🧘 Mode Méditation</button>
-    <label id="encouragement-language-label" for="encouragement-language">Traduction des encouragements</label>
-    <select id="encouragement-language">
+    <button id="start-garden-btn">Mon Jardin</button>
+    <button id="start-meditation-btn">Mode Méditation</button>
+    <label id="encouragement-language-label" for="encouragement-language" aria-hidden="true"></label>
+    <select id="encouragement-language" aria-label="Langue">
+      <option value="fr" lang="fr">Français</option>
       <option value="en" lang="en">English</option>
       <option value="ja" lang="ja">日本語</option>
       <option value="es" lang="es">Español</option>
       <option value="pt" lang="pt">Português</option>
     </select>
     <div id="start-hint">Tape les bulles douces.<br>Glisse sur les bulles dorées.</div>
+    </div>
   </div>
 
   <img id="garden-tree-atlas" src="assets/bonsais.webp" alt="" hidden>
