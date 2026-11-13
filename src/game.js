@@ -7,7 +7,7 @@
 (function () {
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
-  const treeAtlas = document.getElementById("garden-tree-atlas");
+  const treeImages = GardenScene.getTreeImages();
 
   const scoreDisplay = document.getElementById("score-display");
   const comboDisplay = document.getElementById("combo-display");
@@ -190,7 +190,6 @@
 
     // petit fond doux derrière l'arbre pour le mettre en valeur
     ctx.save();
-    ctx.globalAlpha = Math.min(1, revealProgress * 2);
     const vign = ctx.createRadialGradient(viewW / 2, viewH * 0.55, 10, viewW / 2, viewH * 0.55, viewW * 0.7);
     vign.addColorStop(0, "rgba(255,250,230,0.9)");
     vign.addColorStop(1, "rgba(255,250,230,0)");
@@ -201,18 +200,14 @@
     const treeSize = Math.min(viewW * 0.82, viewH * 0.38);
     const treeBase = viewH * 0.68;
 
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, revealProgress / 0.18);
     GardenScene.drawTree(
-      ctx, treeAtlas, treeStateAtReveal.speciesIndex,
+      ctx, treeImages, treeStateAtReveal.speciesIndex,
       viewW / 2, treeBase, treeSize, treeStateAtReveal.levelAfter,
       gainedLeaf ? { progress: sproutProgress, opacity: 1 } : undefined
     );
-    ctx.restore();
 
     // texte d'accompagnement, adapté selon qu'une feuille soit vraiment apparue ou non
     ctx.save();
-    ctx.globalAlpha = Math.min(1, Math.max(0, (revealProgress - 0.3) * 2));
     ctx.fillStyle = "#5a6a5a";
     ctx.font = "15px sans-serif";
     ctx.textAlign = "center";

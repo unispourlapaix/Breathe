@@ -1,6 +1,6 @@
 /* Écran du jardin : sélection, progression et rendu de l’illustration. */
 const Garden = (() => {
-  let canvas, ctx, atlas, landscapes;
+  let canvas, ctx, trees, landscapes;
   let speciesRow, progressBar, progressFill, progressLabel, treeNameEl, treeJpEl;
   let visible = false;
   let selectedSpecies = 0;
@@ -9,13 +9,15 @@ const Garden = (() => {
   function init() {
     canvas = document.getElementById("garden-canvas");
     ctx = canvas.getContext("2d");
-    atlas = document.getElementById("garden-tree-atlas");
+    trees = GardenScene.getTreeImages();
     landscapes = [
       document.getElementById("garden-landscapes-1"),
       document.getElementById("garden-landscapes-2")
     ];
     for (const landscape of landscapes) landscape.addEventListener("load", render);
-    atlas.addEventListener("load", () => {
+    trees.bare.addEventListener("load", render);
+    trees.growing.addEventListener("load", render);
+    trees.mature.addEventListener("load", () => {
       if (!visible) return;
       render();
       for (const [index, chip] of Array.from(speciesRow.children).entries()) {
@@ -75,7 +77,7 @@ const Garden = (() => {
   }
 
   function drawSpeciesIcon(icon, index) {
-    GardenScene.drawTree(icon.getContext("2d"), atlas, index, 46, 85, 78, Bonsai.getLevelsPerTree());
+    GardenScene.drawTree(icon.getContext("2d"), trees, index, 46, 85, 78, Bonsai.getLevelsPerTree());
   }
 
   function canStartSpecies(index, state) {
@@ -119,7 +121,7 @@ const Garden = (() => {
     ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
 
     const state = Progress.getState();
-    GardenScene.draw(ctx, width, height, landscapes, atlas, selectedSpecies, selectedLevel(state), sprout);
+    GardenScene.draw(ctx, width, height, landscapes, trees, selectedSpecies, selectedLevel(state), sprout);
   }
 
   function stopSprout() {

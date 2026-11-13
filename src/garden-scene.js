@@ -42,7 +42,17 @@ const GardenScene = (() => {
     return (ground - cropY) * scale;
   }
 
-  function drawTree(ctx, atlas, speciesIndex, x, base, size, level, sprout) {
+  function getTreeImages() {
+    return {
+      bare: document.getElementById("garden-tree-bare"),
+      growing: document.getElementById("garden-tree-growing"),
+      mature: document.getElementById("garden-tree-atlas")
+    };
+  }
+
+  function drawTree(ctx, trees, speciesIndex, x, base, size, level, sprout) {
+    const atlas = level === 0 ? trees.bare
+      : level >= Bonsai.getLevelsPerTree() ? trees.mature : trees.growing;
     if (!atlas.naturalWidth) return;
 
     const columns = 4;
@@ -50,11 +60,16 @@ const GardenScene = (() => {
     const cellHeight = atlas.naturalHeight / 2;
     const column = speciesIndex % columns;
     const row = Math.floor(speciesIndex / columns);
-    const growth = Bonsai.levelToLeafCount(level) / Bonsai.getLeafCount();
-    const drawnHeight = size * (0.78 + 0.22 * growth);
+    const drawnHeight = size;
     const drawnWidth = drawnHeight * cellWidth / cellHeight;
-    ctx.drawImage(atlas, column * cellWidth, row * cellHeight, cellWidth, cellHeight,
-      x - drawnWidth / 2, base - drawnHeight, drawnWidth, drawnHeight);
+    // Écarte les traits de séparation des cases sans déplacer le dessin.
+    const inset = 2;
+    const insetX = inset * drawnWidth / cellWidth;
+    const insetY = inset * drawnHeight / cellHeight;
+    ctx.drawImage(atlas, column * cellWidth + inset, row * cellHeight + inset,
+      cellWidth - 2 * inset, cellHeight - 2 * inset,
+      x - drawnWidth / 2 + insetX, base - drawnHeight + insetY,
+      drawnWidth - 2 * insetX, drawnHeight - 2 * insetY);
 
     if (sprout) {
       const [anchorX, anchorY, leafX, leafY] = sproutBranches[speciesIndex];
@@ -70,7 +85,7 @@ const GardenScene = (() => {
     }
   }
 
-  function draw(ctx, width, height, landscapes, atlas, speciesIndex, level, sprout) {
+  function draw(ctx, width, height, landscapes, trees, speciesIndex, level, sprout) {
     const scene = scenes[speciesIndex];
     const ground = drawLandscape(ctx, width, height, landscapes, speciesIndex, scene);
     const size = Math.min(width * 0.62, height * 0.51);
@@ -80,12 +95,12 @@ const GardenScene = (() => {
     ctx.ellipse(center, ground, size * 0.25, size * 0.032, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#20192052";
     ctx.fill();
-    drawTree(ctx, atlas, speciesIndex, center, ground + size * 0.025, size, level, sprout);
+    drawTree(ctx, trees, speciesIndex, center, ground + size * 0.025, size, level, sprout);
   }
 
   function getName(speciesIndex) {
     return scenes[speciesIndex].name;
   }
 
-  return { draw, drawTree, getName };
+  return { draw, drawTree, getName, getTreeImages };
 })();
