@@ -583,7 +583,8 @@ const Bonsai = (() => {
     ctx.restore();
   }
 
-  function drawSprout(ctx, leaf, species, progress) {
+  function drawSprout(ctx, leaf, species, progress, illustration) {
+    if (illustration && !illustration.naturalWidth) return;
     const stemProgress = Math.min(1, progress / 0.42);
     const open = Math.max(0, Math.min(1, (progress - 0.22) / 0.68));
     const unfold = open * open * (3 - 2 * open);
@@ -616,7 +617,13 @@ const Bonsai = (() => {
     ctx.rotate(leaf.rot + (1 - unfold) * 0.55);
     ctx.scale(0.15 + unfold * 0.85, 1);
     const size = leaf.size * (0.22 + unfold * 0.78);
-    drawLeaf(ctx, 0, 0, size, 0, species.leafColor[leaf.colorIdx], species.leafShape);
+    if (illustration) {
+      const height = size * 1.65;
+      const width = height * illustration.naturalWidth / illustration.naturalHeight;
+      ctx.drawImage(illustration, -width / 2, -height * 0.96, width, height);
+    } else {
+      drawLeaf(ctx, 0, 0, size, 0, species.leafColor[leaf.colorIdx], species.leafShape);
+    }
     ctx.restore();
   }
 

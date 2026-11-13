@@ -7,10 +7,29 @@
 (function () {
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
-  const treeImages = GardenScene.getTreeImages();
 
   const scoreDisplay = document.getElementById("score-display");
   const comboDisplay = document.getElementById("combo-display");
+  const encouragement = document.getElementById("encouragement");
+  const encouragementFr = document.getElementById("encouragement-fr");
+  const encouragementTranslation = document.getElementById("encouragement-translation");
+  const encouragementLanguage = document.getElementById("encouragement-language");
+  const encouragementLanguageKey = "breathe-encouragement-language";
+  try {
+    const savedLanguage = localStorage.getItem(encouragementLanguageKey);
+    if (ENCOURAGEMENT_LANGUAGES.includes(savedLanguage)) encouragementLanguage.value = savedLanguage;
+  } catch {
+    // Le choix reste disponible pour la session si le stockage est bloqué.
+  }
+  encouragementLanguage.addEventListener("change", () => {
+    try {
+      localStorage.setItem(encouragementLanguageKey, encouragementLanguage.value);
+    } catch {
+      // Le choix reste disponible pour la session.
+    }
+  });
+  let encouragementTimer;
+  let lastEncouragement = -1;
 
   const startOverlay = document.getElementById("start-overlay");
   const startPlayBtn = document.getElementById("start-play");
@@ -18,7 +37,6 @@
   const endReplayBtn = document.getElementById("end-card-replay");
 
   const BUBBLES_TO_FILL_HEART = 35; // nombre de pops pour remplir le cœur et finir la session
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let elapsedMs = 0;
   let score = 0;
   let comboCount = 0;
@@ -27,9 +45,7 @@
 
   let running = false;
   let sessionEnded = false;
-  let revealingTree = false;
-  let revealProgress = 0;
-  let treeStateAtReveal = null; // {speciesIndex, levelBefore, levelAfter, treeName, treeJp}
+  let sessionReward = null;
   let currentQuote = null;
   let lastFrameTime = 0;
 
@@ -51,6 +67,7 @@
   let viewW = 0, viewH = 0;
 
   function onPop(bubble, isChainHit) {
+    if (bubble.isStar) showEncouragement();
     const now = performance.now();
     if (now - comboTimer < 900) {
       comboCount++;
@@ -79,6 +96,23 @@
 
     const kind = isChainHit ? "chain" : (bubble.isBonus ? "bonus" : "normal");
     PopText.spawn(bubble.x, bubble.y - bubble.radius, kind);
+  }
+
+  function showEncouragement() {
+    const count = ENCOURAGEMENTS.length;
+    const offset = 1 + Math.floor(Math.random() * (count - 1));
+    lastEncouragement = lastEncouragement < 0
+      ? Math.floor(Math.random() * count)
+      : (lastEncouragement + offset) % count;
+    const [french, english] = ENCOURAGEMENTS[lastEncouragement];
+    const language = encouragementLanguage.value;
+    const translationIndex = ENCOURAGEMENT_LANGUAGES.indexOf(language) - 1;
+    encouragementFr.textContent = french;
+    encouragementTranslation.textContent = ENCOURAGEMENT_TRANSLATIONS[lastEncouragement][translationIndex] ?? english;
+    encouragementTranslation.lang = language;
+    encouragement.hidden = false;
+    clearTimeout(encouragementTimer);
+    encouragementTimer = setTimeout(() => { encouragement.hidden = true; }, 3500);
   }
 
   function spawnParticles(x, y, color, isBonus) {
@@ -157,10 +191,10 @@
       Heart.draw(ctx, viewW - 46, 50);
     }
 
-    if (sessionEnded && !revealingTree) {
+    if (sessionEnded) {
       Scroll.update(dt);
       Scroll.draw(ctx, viewW / 2, viewH / 2, Math.min(viewW - 50, 320), currentQuote, score);
-      if (Scroll.getAppearProgress() > 0.85 && !endReplayBtn.classList.contains("visible") && treeStateAtReveal) {
+      if (Scroll.getAppearProgress() > 0.85 && !endReplayBtn.classList.contains("visible") && sessionReward) {
         endReplayBtn.classList.add("visible");
         endReplayBtn.textContent = "Continuer";
         endReplayBtn.style.left = "50%";
@@ -169,78 +203,18 @@
       }
     }
 
-    if (revealingTree) {
-      drawTreeReveal(ctx, dt);
-    }
-
     requestAnimationFrame(gameLoop);
   }
 
-  function drawTreeReveal(ctx, dt) {
-    if (!treeStateAtReveal) return; // la progression n'a pas encore fini de se résoudre, on attend la frame suivante
-
-    const leavesBefore = Bonsai.levelToLeafCount(treeStateAtReveal.levelBefore);
-    const leavesAfter = Bonsai.levelToLeafCount(treeStateAtReveal.levelAfter);
-    const gainedLeaf = leavesAfter > leavesBefore;
-    const revealDuration = gainedLeaf ? 2100 : 750;
-    revealProgress = reducedMotion.matches ? 1 : Math.min(1, revealProgress + dt / revealDuration);
-    const sproutProgress = gainedLeaf
-      ? Math.max(0, Math.min(1, (revealProgress - 0.18) / 0.65))
-      : 1;
-
-    // petit fond doux derrière l'arbre pour le mettre en valeur
-    ctx.save();
-    const vign = ctx.createRadialGradient(viewW / 2, viewH * 0.55, 10, viewW / 2, viewH * 0.55, viewW * 0.7);
-    vign.addColorStop(0, "rgba(255,250,230,0.9)");
-    vign.addColorStop(1, "rgba(255,250,230,0)");
-    ctx.fillStyle = vign;
-    ctx.fillRect(0, 0, viewW, viewH);
-    ctx.restore();
-
-    const treeSize = Math.min(viewW * 0.82, viewH * 0.38);
-    const treeBase = viewH * 0.68;
-
-    GardenScene.drawTree(
-      ctx, treeImages, treeStateAtReveal.speciesIndex,
-      viewW / 2, treeBase, treeSize, treeStateAtReveal.levelAfter,
-      gainedLeaf ? { progress: sproutProgress, opacity: 1 } : undefined
-    );
-
-    // texte d'accompagnement, adapté selon qu'une feuille soit vraiment apparue ou non
-    ctx.save();
-    ctx.fillStyle = "#5a6a5a";
-    ctx.font = "15px sans-serif";
-    ctx.textAlign = "center";
-    const mainText = gainedLeaf
-      ? treeStateAtReveal.treeName + " a gagné une feuille"
-      : treeStateAtReveal.treeName + " continue de grandir";
-    ctx.fillText(mainText, viewW / 2, viewH * 0.18);
-    ctx.font = "italic 12px sans-serif";
-    ctx.fillStyle = "#8a9a8a";
-    ctx.fillText(
-      treeStateAtReveal.treeJp + " · " + leavesAfter + " / " + Bonsai.getLeafCount() + " feuilles",
-      viewW / 2, viewH * 0.18 + 20
-    );
-    ctx.restore();
-
-    if (revealProgress >= 1 && !endReplayBtn.classList.contains("visible")) {
-      endReplayBtn.classList.add("visible");
-      endReplayBtn.textContent = "Rejouer";
-      endReplayBtn.style.left = "50%";
-      endReplayBtn.style.top = Math.min(viewH - 52, treeBase + 28) + "px";
-      endReplayBtn.style.transform = "translateX(-50%)";
-    }
-  }
-
   function startSession() {
+    clearTimeout(encouragementTimer);
+    encouragement.hidden = true;
     score = 0;
     comboCount = 0;
     elapsedMs = 0;
     particles = [];
     scoreDisplay.textContent = "0";
     sessionEnded = false;
-    revealingTree = false;
-    revealProgress = 0;
     currentQuote = null;
 
     const dims = resizeCanvas();
@@ -252,7 +226,8 @@
 
     Scenery.init(viewW, viewH, themeToUse);
     Bubbles.reset();
-    Bubbles.init(viewW, viewH, onPop);
+    const starsUnlocked = Progress.getState().level >= Bonsai.getLevelsPerTree() / 2;
+    Bubbles.init(viewW, viewH, onPop, starsUnlocked);
     Heart.init(BUBBLES_TO_FILL_HEART, endSession);
     Heart.setExplosionCenter(viewW / 2, viewH / 2);
     Scroll.hide();
@@ -270,29 +245,14 @@
   function endSession() {
     running = false;
     sessionEnded = true;
-    revealingTree = false;
-    revealProgress = 0;
-    treeStateAtReveal = null;
+    sessionReward = null;
     const quote = getRandomQuote(lastQuoteId);
     lastQuoteId = quote.id;
     currentQuote = quote;
     Scroll.show();
 
-    // Capture l'état du bonsaï avant progression, puis fait avancer le niveau (1 session = 1 niveau)
-    const stateBefore = Progress.getState();
-    const speciesIndex = stateBefore.speciesIndex;
-    const levelBefore = stateBefore.level;
-    const sp = Bonsai.getSpecies(speciesIndex);
-
     Garden.onSessionComplete().then(result => {
-      const stateAfter = Progress.getState();
-      treeStateAtReveal = {
-        speciesIndex,
-        levelBefore,
-        levelAfter: stateAfter.level,
-        treeName: sp.name,
-        treeJp: sp.nameJp
-      };
+      sessionReward = result;
       if (result.justCompletedTree) {
         currentQuote = {
           text: currentQuote.text,
@@ -302,61 +262,61 @@
     });
   }
 
-  // ---- Input handling (tap + swipe) ----
-  let touchStart = null;
-  let touchMoved = false;
+  const SWIPE_THRESHOLD = 9;
+  let gesture = null;
 
-  function getPos(evt) {
+  function getPos(event) {
     const rect = canvas.getBoundingClientRect();
-    const t = evt.touches ? evt.touches[0] : evt;
-    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
 
-  canvas.addEventListener("touchstart", (e) => {
-    if (!running || Calm.isActive()) return;
-    touchStart = getPos(e);
-    touchMoved = false;
-  }, { passive: true });
+  canvas.addEventListener("pointerdown", event => {
+    if (!running || Calm.isActive() || !event.isPrimary || event.button !== 0) return;
+    const start = getPos(event);
+    gesture = {
+      id: event.pointerId,
+      start,
+      previous: start,
+      target: Bubbles.findTapTarget(start.x, start.y),
+      swiping: false
+    };
+    canvas.setPointerCapture(event.pointerId);
+  });
 
-  canvas.addEventListener("touchmove", (e) => {
-    if (!running || !touchStart || Calm.isActive()) return;
-    touchMoved = true;
-    const pos = getPos(e);
-    Bubbles.handleSwipe(touchStart.x, touchStart.y, pos.x, pos.y);
-    touchStart = pos;
-  }, { passive: true });
+  function updateSwipe(position) {
+    if (!gesture.swiping &&
+        Math.hypot(position.x - gesture.start.x, position.y - gesture.start.y) < SWIPE_THRESHOLD) return;
+    gesture.swiping = true;
+    const previous = gesture.previous;
+    if (previous.x === position.x && previous.y === position.y) return;
+    Bubbles.handleSwipe(previous.x, previous.y, position.x, position.y);
+    gesture.previous = position;
+  }
 
-  canvas.addEventListener("touchend", (e) => {
-    if (!running || !touchStart || Calm.isActive()) return;
-    if (!touchMoved) {
-      Bubbles.handleTap(touchStart.x, touchStart.y);
+  canvas.addEventListener("pointermove", event => {
+    if (gesture?.id !== event.pointerId || !running || Calm.isActive()) return;
+    updateSwipe(getPos(event));
+  });
+
+  canvas.addEventListener("pointerup", event => {
+    if (gesture?.id !== event.pointerId) return;
+    if (running && !Calm.isActive()) {
+      const position = getPos(event);
+      updateSwipe(position);
+      if (!gesture.swiping) {
+        Bubbles.popTapTarget(gesture.target ?? Bubbles.findTapTarget(position.x, position.y));
+      }
+      Calm.registerAction();
     }
-    Calm.registerAction();
-    touchStart = null;
-  }, { passive: true });
+    gesture = null;
+  });
 
-  // Souris (test desktop)
-  let mouseDown = false;
-  canvas.addEventListener("mousedown", (e) => {
-    if (!running || Calm.isActive()) return;
-    mouseDown = true;
-    touchStart = getPos(e);
-    touchMoved = false;
-  });
-  canvas.addEventListener("mousemove", (e) => {
-    if (!running || !mouseDown || !touchStart || Calm.isActive()) return;
-    touchMoved = true;
-    const pos = getPos(e);
-    Bubbles.handleSwipe(touchStart.x, touchStart.y, pos.x, pos.y);
-    touchStart = pos;
-  });
-  canvas.addEventListener("mouseup", (e) => {
-    if (!running || !touchStart || Calm.isActive()) return;
-    if (!touchMoved) Bubbles.handleTap(touchStart.x, touchStart.y);
-    Calm.registerAction();
-    mouseDown = false;
-    touchStart = null;
-  });
+  function cancelGesture(event) {
+    if (gesture?.id === event.pointerId) gesture = null;
+  }
+
+  canvas.addEventListener("pointercancel", cancelGesture);
+  canvas.addEventListener("lostpointercapture", cancelGesture);
 
   window.addEventListener("resize", () => {
     if (running || sessionEnded) {
@@ -365,17 +325,17 @@
     }
   });
 
+  function returnToMenu() {
+    sessionEnded = false;
+    endReplayBtn.classList.remove("visible");
+    startOverlay.classList.remove("hidden");
+  }
+
   startPlayBtn.addEventListener("click", startSession);
   endReplayBtn.addEventListener("click", () => {
-    if (sessionEnded && !revealingTree) {
-      // phase parchemin -> on passe à la révélation de l'arbre
-      revealingTree = true;
-      revealProgress = 0;
-      endReplayBtn.classList.remove("visible");
-    } else {
-      // phase révélation déjà vue -> on relance une nouvelle session
-      startSession();
-    }
+    if (!sessionEnded || !sessionReward) return;
+    returnToMenu();
+    if (sessionReward.gainedLeaf) Garden.show(true);
   });
 
   const startGardenBtn = document.getElementById("start-garden-btn");

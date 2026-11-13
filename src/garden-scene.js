@@ -10,12 +10,25 @@ const GardenScene = (() => {
     { name: "Nuit d’hiver au jardin de pierres", ground: 0.80, shade: "#3b495e" }
   ];
 
+  // Centre du pied du pot et demi-largeur de son emprise, en fractions de la case.
+  const potContacts = [
+    [0.47, 0.97, 0.23], [0.48, 0.97, 0.24], [0.50, 0.96, 0.23],
+    [0.31, 0.94, 0.23], [0.48, 0.97, 0.24], [0.46, 0.96, 0.24],
+    [0.46, 0.96, 0.25]
+  ];
+
   // Points d’attache des nouvelles feuilles dans chaque illustration (en pourcentage).
   const sproutBranches = [
     [68, 46, 76, 42], [72, 53, 79, 45], [68, 44, 76, 38],
     [76, 52, 84, 48], [73, 48, 82, 44], [73, 52, 81, 46],
     [73, 50, 82, 44]
   ];
+
+  const canopyLights = [
+    "#ffdfbb", "#eff7ff", "#ffedf4", "#ddefe4", "#fff0bf", "#f0dcff", "#bdd8ff"
+  ];
+  let softBackdrop;
+  let softBackdropKey;
 
   function drawLandscape(ctx, width, height, landscapes, index, scene) {
     const image = landscapes[Math.floor(index / 4)];
@@ -37,16 +50,49 @@ const GardenScene = (() => {
     const cropX = (panelWidth - cropWidth) / 2;
     const ground = panelHeight * scene.ground;
     const cropY = Math.min(panelHeight - cropHeight, Math.max(0, ground - cropHeight * 0.83));
-    ctx.drawImage(image, panel % 2 * cellWidth + inset + cropX,
-      Math.floor(panel / 2) * cellHeight + inset + cropY, cropWidth, cropHeight, 0, 0, width, height);
-    return (ground - cropY) * scale;
+    const sourceX = panel % 2 * cellWidth + inset + cropX;
+    const sourceY = Math.floor(panel / 2) * cellHeight + inset + cropY;
+    ctx.drawImage(image, sourceX, sourceY, cropWidth, cropHeight, 0, 0, width, height);
+    const groundY = (ground - cropY) * scale;
+    const size = Math.min(width * 0.62, height * 0.51);
+    const lightX = width / 2 + (0.5 - potContacts[index][0]) * size;
+    const lightY = groundY - (potContacts[index][1] - 0.34) * size;
+    const radius = size * 0.83;
+
+    const key = [index, width, height, image.naturalWidth, image.naturalHeight].join("/");
+    if (key !== softBackdropKey) {
+      softBackdrop ??= document.createElement("canvas");
+      softBackdrop.width = Math.ceil(width);
+      softBackdrop.height = Math.ceil(height);
+      const layer = softBackdrop.getContext("2d");
+      layer.filter = "blur(3px) saturate(72%)";
+      layer.drawImage(image, sourceX, sourceY, cropWidth, cropHeight, 0, 0, width, height);
+      layer.filter = "none";
+      layer.globalCompositeOperation = "destination-in";
+      const mask = layer.createRadialGradient(lightX, lightY, radius * 0.28, lightX, lightY, radius);
+      mask.addColorStop(0, "#fff");
+      mask.addColorStop(1, "#fff0");
+      layer.fillStyle = mask;
+      layer.fillRect(0, 0, width, height);
+      softBackdropKey = key;
+    }
+    ctx.drawImage(softBackdrop, 0, 0);
+
+    const light = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, radius);
+    light.addColorStop(0, canopyLights[index] + "70");
+    light.addColorStop(0.42, canopyLights[index] + "42");
+    light.addColorStop(1, canopyLights[index] + "00");
+    ctx.fillStyle = light;
+    ctx.fillRect(0, 0, width, height);
+    return groundY;
   }
 
   function getTreeImages() {
     return {
       bare: document.getElementById("garden-tree-bare"),
       growing: document.getElementById("garden-tree-growing"),
-      mature: document.getElementById("garden-tree-atlas")
+      mature: document.getElementById("garden-tree-atlas"),
+      mapleLeaf: document.getElementById("garden-maple-leaf")
     };
   }
 
@@ -80,7 +126,8 @@ const GardenScene = (() => {
       Bonsai.drawSprout(ctx, {
         anchorX, anchorY, x: leafX, y: leafY,
         size: 8.6, rot: 0.82, colorIdx: 2
-      }, Bonsai.getSpecies(speciesIndex), sprout.progress);
+      }, Bonsai.getSpecies(speciesIndex), sprout.progress,
+      speciesIndex === 0 ? trees.mapleLeaf : undefined);
       ctx.restore();
     }
   }
@@ -90,12 +137,15 @@ const GardenScene = (() => {
     const ground = drawLandscape(ctx, width, height, landscapes, speciesIndex, scene);
     const size = Math.min(width * 0.62, height * 0.51);
     const center = width / 2;
+    const [potX, potY, potRadius] = potContacts[speciesIndex];
+    const treeX = center + (0.5 - potX) * size;
+    const treeBase = ground + (1 - potY) * size;
 
     ctx.beginPath();
-    ctx.ellipse(center, ground, size * 0.25, size * 0.032, 0, 0, Math.PI * 2);
+    ctx.ellipse(center, ground, size * potRadius, size * 0.028, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#20192052";
     ctx.fill();
-    drawTree(ctx, trees, speciesIndex, center, ground + size * 0.025, size, level, sprout);
+    drawTree(ctx, trees, speciesIndex, treeX, treeBase, size, level, sprout);
   }
 
   function getName(speciesIndex) {

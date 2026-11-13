@@ -1,10 +1,11 @@
 /* Écran du jardin : sélection, progression et rendu de l’illustration. */
 const Garden = (() => {
   let canvas, ctx, trees, landscapes;
-  let speciesRow, progressBar, progressFill, progressLabel, treeNameEl, treeJpEl;
+  let speciesRow, progressBar, progressFill;
   let visible = false;
   let selectedSpecies = 0;
-  let replayButton, replayFrame, sprout;
+  let sproutFrame, sprout;
+  let description, imageLock, thoughtText, thoughtSource, lastThoughtId;
 
   function init() {
     canvas = document.getElementById("garden-canvas");
@@ -15,23 +16,22 @@ const Garden = (() => {
       document.getElementById("garden-landscapes-2")
     ];
     for (const landscape of landscapes) landscape.addEventListener("load", render);
-    trees.bare.addEventListener("load", render);
-    trees.growing.addEventListener("load", render);
-    trees.mature.addEventListener("load", () => {
-      if (!visible) return;
-      render();
-      for (const [index, chip] of Array.from(speciesRow.children).entries()) {
-        drawSpeciesIcon(chip.firstElementChild, index);
-      }
-    });
+    for (const tree of [trees.bare, trees.growing, trees.mature]) {
+      tree.addEventListener("load", () => {
+        if (!visible) return;
+        render();
+        for (const [index, chip] of Array.from(speciesRow.children).entries()) {
+          drawSpeciesIcon(chip.firstElementChild, index);
+        }
+      });
+    }
     speciesRow = document.getElementById("garden-species-row");
     progressBar = document.getElementById("garden-progress-bar");
     progressFill = document.getElementById("garden-progress-fill");
-    progressLabel = document.getElementById("garden-progress-label");
-    treeNameEl = document.getElementById("garden-tree-name");
-    treeJpEl = document.getElementById("garden-tree-jp");
-    replayButton = document.getElementById("garden-replay-sprout");
-    replayButton.addEventListener("click", replaySprout);
+    description = document.getElementById("garden-description");
+    imageLock = document.getElementById("garden-image-lock");
+    thoughtText = document.getElementById("garden-thought-text");
+    thoughtSource = document.getElementById("garden-thought-source");
 
     new ResizeObserver(render).observe(canvas.parentElement);
   }
@@ -47,7 +47,7 @@ const Garden = (() => {
       chip.className = "garden-species-chip";
 
       const isComplete = state.completedSpecies.includes(i);
-      const locked = i !== state.speciesIndex && !isComplete && !canStartSpecies(i, state);
+      const locked = isLocked(i, state);
       const label = species.name + (locked ? " · Aperçu du jardin" : "");
       chip.title = label;
       chip.setAttribute("aria-label", label);
@@ -67,7 +67,7 @@ const Garden = (() => {
         if (canStartSpecies(i, Progress.getState())) void Progress.chooseSpecies(i);
         selectedSpecies = i;
         buildSpeciesRow();
-        refreshHeader();
+        refreshProgress();
         speciesRow.children[i].focus({ preventScroll: true });
       });
 
@@ -77,7 +77,9 @@ const Garden = (() => {
   }
 
   function drawSpeciesIcon(icon, index) {
-    GardenScene.drawTree(icon.getContext("2d"), trees, index, 46, 85, 78, Bonsai.getLevelsPerTree());
+    const iconContext = icon.getContext("2d");
+    iconContext.clearRect(0, 0, icon.width, icon.height);
+    GardenScene.drawTree(iconContext, trees, index, 46, 85, 78, speciesLevel(Progress.getState(), index));
   }
 
   function canStartSpecies(index, state) {
@@ -86,24 +88,28 @@ const Garden = (() => {
       !state.completedSpecies.includes(index);
   }
 
-  function selectedLevel(state) {
-    if (selectedSpecies === state.speciesIndex) return state.level;
-    return state.completedSpecies.includes(selectedSpecies) ? Bonsai.getLevelsPerTree() : 0;
+  function isLocked(index, state) {
+    return index !== state.speciesIndex && !state.completedSpecies.includes(index) &&
+      !canStartSpecies(index, state);
   }
 
-  function refreshHeader() {
+  function speciesLevel(state, index) {
+    if (index === state.speciesIndex) return state.level;
+    return state.completedSpecies.includes(index) ? Bonsai.getLevelsPerTree() : 0;
+  }
+
+  function refreshProgress() {
     const state = Progress.getState();
     const species = Bonsai.getSpecies(selectedSpecies);
     const maxLevel = Bonsai.getLevelsPerTree();
-    const level = selectedLevel(state);
-    const preview = selectedSpecies !== state.speciesIndex && !state.completedSpecies.includes(selectedSpecies);
-    replayButton.hidden = species.leafShape !== "maple" || Bonsai.levelToLeafCount(level) === 0;
-    treeNameEl.textContent = species.name;
-    treeJpEl.textContent = species.nameJp + " · " + GardenScene.getName(selectedSpecies);
+    const level = speciesLevel(state, selectedSpecies);
+    imageLock.hidden = !isLocked(selectedSpecies, state);
+    description.textContent = species.name + " (" + species.nameJp + ") · " +
+      GardenScene.getName(selectedSpecies);
+    canvas.setAttribute("aria-labelledby", description.id);
     progressFill.style.width = (level / maxLevel * 100) + "%";
     progressBar.setAttribute("aria-valuenow", level);
     progressBar.setAttribute("aria-valuemax", maxLevel);
-    progressLabel.textContent = preview ? "Aperçu · Arbre à débloquer" : "Niveau " + level + " / " + maxLevel;
     render();
   }
 
@@ -121,16 +127,16 @@ const Garden = (() => {
     ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
 
     const state = Progress.getState();
-    GardenScene.draw(ctx, width, height, landscapes, trees, selectedSpecies, selectedLevel(state), sprout);
+    GardenScene.draw(ctx, width, height, landscapes, trees, selectedSpecies, speciesLevel(state, selectedSpecies), sprout);
   }
 
   function stopSprout() {
-    if (replayFrame !== undefined) cancelAnimationFrame(replayFrame);
-    replayFrame = undefined;
+    if (sproutFrame !== undefined) cancelAnimationFrame(sproutFrame);
+    sproutFrame = undefined;
     sprout = undefined;
   }
 
-  function replaySprout() {
+  function animateSprout() {
     stopSprout();
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const start = performance.now();
@@ -147,18 +153,23 @@ const Garden = (() => {
         opacity: reducedMotion ? 1 : Math.min(1, (2200 - elapsed) / 400)
       };
       render();
-      replayFrame = requestAnimationFrame(animate);
+      sproutFrame = requestAnimationFrame(animate);
     }
 
-    replayFrame = requestAnimationFrame(animate);
+    sproutFrame = requestAnimationFrame(animate);
   }
 
-  function show() {
+  function show(gainedLeaf = false) {
+    const thought = getRandomQuote(lastThoughtId, BIBLICAL_THOUGHTS);
+    lastThoughtId = thought.id;
+    thoughtText.textContent = thought.text;
+    thoughtSource.textContent = thought.author;
     selectedSpecies = Progress.getState().speciesIndex;
     visible = true;
     document.getElementById("garden-overlay").classList.add("visible");
-    refreshHeader();
+    refreshProgress();
     buildSpeciesRow();
+    if (gainedLeaf) animateSprout();
   }
 
   function hide() {
@@ -168,11 +179,15 @@ const Garden = (() => {
   }
 
   async function onSessionComplete() {
+    const leavesBefore = Bonsai.levelToLeafCount(Progress.getState().level);
     const wasComplete = Progress.isCurrentTreeComplete();
     await Progress.advanceLevel();
     const isNowComplete = Progress.isCurrentTreeComplete();
-    return { justCompletedTree: !wasComplete && isNowComplete };
+    return {
+      justCompletedTree: !wasComplete && isNowComplete,
+      gainedLeaf: Bonsai.levelToLeafCount(Progress.getState().level) > leavesBefore
+    };
   }
 
-  return { init, show, hide, onSessionComplete, refreshHeader, buildSpeciesRow };
+  return { init, show, hide, onSessionComplete, refreshProgress, buildSpeciesRow };
 })();

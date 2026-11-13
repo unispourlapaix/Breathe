@@ -67,8 +67,36 @@ const QUOTE_BANK = [
   { id: "Q055", text: "Sois comme l'eau, disent les sages. L'eau, elle, n'a jamais eu à remplir de déclaration d'impôts.", author: "sagesse à pincettes" },
 ];
 
-function getRandomQuote(excludeId) {
-  let pool = QUOTE_BANK;
-  if (excludeId) pool = QUOTE_BANK.filter(q => q.id !== excludeId);
+// Formulations originales inspirées des versets indiqués, réutilisables sans restriction.
+const BIBLICAL_THOUGHTS = [
+  ["3,5", "Confie-toi à Dieu, même quand tu ne vois pas tout le chemin."],
+  ["3,27", "Fais le bien dès que tu en as la possibilité."],
+  ["4,23", "Prends soin de ton cœur. Tes choix y prennent racine."],
+  ["10,12", "L’amour sait apaiser les querelles."],
+  ["11,25", "En aidant les autres, on trouve aussi de quoi reprendre souffle."],
+  ["12,18", "Des mots choisis avec soin peuvent réparer une blessure."],
+  ["12,25", "Une parole bienveillante allège un cœur inquiet."],
+  ["13,20", "La sagesse grandit au contact des gens sages."],
+  ["14,29", "Avant de te mettre en colère, prends le temps de comprendre."],
+  ["14,30", "Un cœur paisible fait du bien au corps."],
+  ["15,1", "Un mot dit avec douceur peut calmer la colère."],
+  ["15,17", "Un repas simple partagé avec amour est déjà un festin."],
+  ["16,3", "Remets tes projets à Dieu avant de te mettre à l’œuvre."],
+  ["16,9", "Tu peux tracer ta route et laisser Dieu guider tes pas."],
+  ["16,24", "Une parole aimable redonne des forces."],
+  ["16,32", "Garder son calme demande plus de force que gagner une bataille."],
+  ["17,9", "Le pardon donne à l’amitié une chance de grandir."],
+  ["17,17", "On reconnaît un ami à sa présence dans les jours difficiles."],
+  ["17,22", "La joie du cœur aide à reprendre des forces."],
+  ["18,13", "Écoute jusqu’au bout avant de répondre."],
+  ["27,9", "Un conseil sincère fait du bien, comme un parfum familier."]
+].map(([verse, text]) => ({
+  id: "Pr " + verse,
+  text,
+  author: "D’après Proverbes " + verse
+}));
+
+function getRandomQuote(excludeId, quotes = QUOTE_BANK) {
+  const pool = quotes.filter(quote => quote.id !== excludeId);
   return pool[Math.floor(Math.random() * pool.length)];
 }

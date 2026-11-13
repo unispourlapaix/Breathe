@@ -2,7 +2,7 @@
    MOD-BUBBLES-001 : Bulles polygonales
    Gère le spawn, la chute, la détection tap/swipe, le pop
    Expose : Bubbles.init, .update, .draw, .spawnTick,
-            .handleTap, .handleSwipe, .resize
+            .findTapTarget, .popTapTarget, .handleSwipe, .resize
    ============================================ */
 
 const Bubbles = (() => {
@@ -13,15 +13,17 @@ const Bubbles = (() => {
   let spawnInterval = 950; // ms entre apparitions, ajusté dynamiquement
   let idCounter = 0;
   let onPopCallback = null;
+  let starsEnabled = false;
 
   const PALETTE_NORMAL = ["#bcd9c8", "#cfe3d4", "#d8e8e0", "#b8d4cf", "#cde0d6"];
   const PALETTE_BONUS = ["#f3d27a", "#f0c869", "#f7d98f"];
 
-  function init(width, height, popCallback) {
+  function init(width, height, popCallback, enableStars = false) {
     W = width; H = height;
     list = [];
     spawnTimer = 0;
     onPopCallback = popCallback;
+    starsEnabled = enableStars;
   }
 
   function resize(width, height) {
@@ -39,13 +41,15 @@ const Bubbles = (() => {
     return pts;
   }
 
-  const NO_TARGET_TIMEOUT_MS = 1400; // si aucune bulle touchée pendant ce délai, le projectile s'éteint
+  const NO_TARGET_TIMEOUT_MS = 4000; // délai sans impact avant que le projectile s’éteigne
 
   function spawnBubble() {
-    const isBonus = Math.random() < 0.09;
+    const roll = Math.random();
+    const isBonus = roll < 0.09;
+    const isStar = starsEnabled && roll >= 0.09 && roll < 0.18;
     const radius = isBonus ? 22 + Math.random() * 6 : 18 + Math.random() * 14;
     const sides = isBonus ? 8 : 5 + Math.floor(Math.random() * 3);
-    const color = isBonus
+    const color = isStar ? "#dcc6f2" : isBonus
       ? PALETTE_BONUS[Math.floor(Math.random() * PALETTE_BONUS.length)]
       : PALETTE_NORMAL[Math.floor(Math.random() * PALETTE_NORMAL.length)];
 
@@ -61,6 +65,7 @@ const Bubbles = (() => {
       points: randomPolygon(sides, radius),
       color,
       isBonus,
+      isStar,
       popped: false,
       popProgress: 0,
       wobble: Math.random() * Math.PI * 2,
@@ -97,6 +102,7 @@ const Bubbles = (() => {
         if (b.x - b.radius < 0) { b.x = b.radius; b.launchVx *= -1; }
         if (b.x + b.radius > W) { b.x = W - b.radius; b.launchVx *= -1; }
         if (b.y - b.radius < 0) { b.y = b.radius; b.launchVy *= -1; }
+        if (b.y + b.radius > H) { b.y = H - b.radius; b.launchVy *= -1; }
         // léger frein pour que ça finisse par s'apaiser si pas assez de touches
         b.launchVx *= 0.998;
         b.launchVy *= 0.998;
@@ -107,11 +113,6 @@ const Bubbles = (() => {
           b.popProgress = 0.55;
         }
 
-        // sortie par le bas = disparition discrète
-        if (b.y - b.radius > H + 20) {
-          b.popped = true;
-          b.popProgress = 0.6;
-        }
         continue;
       }
 
@@ -149,20 +150,24 @@ const Bubbles = (() => {
 
   function pointInBubble(px, py, b) {
     const dx = px - b.x, dy = py - b.y;
-    return Math.sqrt(dx * dx + dy * dy) <= b.radius * 1.15;
+    const hitRadius = b.radius * 1.15 + 3;
+    return dx * dx + dy * dy <= hitRadius * hitRadius;
   }
 
   // Tap = pop direct pour bulle normale uniquement
-  function handleTap(px, py) {
+  function findTapTarget(px, py) {
     for (let i = list.length - 1; i >= 0; i--) {
       const b = list[i];
       if (b.popped || b.isBonus) continue;
       if (pointInBubble(px, py, b)) {
-        popBubble(b);
-        return true;
+        return b;
       }
     }
-    return false;
+    return null;
+  }
+
+  function popTapTarget(bubble) {
+    if (bubble && !bubble.popped && list.includes(bubble)) popBubble(bubble);
   }
 
   // Swipe = lance la bulle bonus comme un projectile (billard zen)
@@ -256,6 +261,24 @@ const Bubbles = (() => {
       ctx.stroke();
     }
 
+    if (b.isStar) {
+      ctx.beginPath();
+      for (let point = 0; point < 10; point++) {
+        const angle = point * Math.PI / 5 - Math.PI / 2;
+        const radius = b.radius * (point % 2 ? 0.28 : 0.63);
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        if (point === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = "#fff0a9";
+      ctx.strokeStyle = "#6e5088";
+      ctx.lineWidth = 1.2;
+      ctx.fill();
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 
@@ -268,5 +291,5 @@ const Bubbles = (() => {
     spawnTimer = 0;
   }
 
-  return { init, update, draw, handleTap, handleSwipe, resize, reset };
+  return { init, update, draw, findTapTarget, popTapTarget, handleSwipe, resize, reset };
 })();
