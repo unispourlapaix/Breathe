@@ -22,4 +22,10 @@ const out = dev.slice(0, firstTag) + "<script>\n" + code + "\n</script>" + dev.s
 
 fs.mkdirSync("docs", { recursive: true });
 fs.writeFileSync(path.join("docs", "index.html"), out);
+fs.copyFileSync("manifest.webmanifest", path.join("docs", "manifest.webmanifest"));
+fs.mkdirSync(path.join("docs", "assets"), { recursive: true });
+for (const size of [32, 180, 192, 512]) {
+  const icon = path.join("assets", `icon-${size}.png`);
+  fs.copyFileSync(icon, path.join("docs", icon));
+}
 console.log(`OK : docs/index.html (${files.length} modules, ${Math.round(out.length / 1024)} Ko)`);
