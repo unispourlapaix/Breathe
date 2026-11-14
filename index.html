@@ -50,7 +50,6 @@
     border-radius:16px; background:#fff8ea; color:#55415e;
     text-align:center; font-size:14px; box-shadow:0 3px 14px #32254233;
   }
-  #encouragement-translation { display:block; margin-top:3px; font-size:12px; }
   #encouragement-language-label {
     margin-top:12px; width:24px; height:16px; flex:none;
     background:linear-gradient(90deg,#173d91 0 33.33%,#fff 33.33% 66.66%,#e43247 66.66%);
@@ -302,7 +301,7 @@
   #start-title, #start-sub, #start-hint, #encouragement-language-label {
     color:#183b30; text-shadow:0 0 6px #fff9e5,0 0 12px #fff9e5;
   }
-  #start-panel button, #encouragement-language {
+  #start-panel button, #encouragement-language, #start-credit {
     border:0; cursor:pointer;
     color:#29483e; text-shadow:0 1px 0 #fff9;
     clip-path:polygon(9% 3%,77% 0,96% 15%,100% 58%,91% 97%,22% 100%,3% 84%,0 35%);
@@ -314,7 +313,7 @@
       linear-gradient(150deg,var(--facet-light) 0 19%,transparent 20%),
       linear-gradient(23deg,var(--facet-edge) 0 17%,var(--facet-base) 18% 77%,var(--facet-light) 78%);
   }
-  #start-panel button:focus-visible, #encouragement-language:focus-visible {
+  #start-panel button:focus-visible, #encouragement-language:focus-visible, #start-credit:focus-visible {
     outline:0; box-shadow:inset 0 0 0 5px #f9cf62;
   }
   #start-panel button:active { filter:brightness(.91); }
@@ -335,6 +334,15 @@
   #encouragement-language option { color:#283a2d; background:#f5f5e9; }
   #encouragement-language { color:#4b3515; }
   #start-hint { margin-top:12px; font-size:12px; line-height:1.5; }
+  #start-credit {
+    position:absolute; bottom:max(8px,env(safe-area-inset-bottom));
+    left:50%; transform:translateX(-50%);
+    --facet-light:#fff; --facet-base:#f4f8f6; --facet-edge:#cddbd5;
+    padding:4px 12px 5px; font-size:11px; line-height:1.15;
+    text-decoration:none; white-space:nowrap;
+  }
+  #start-overlay { padding-bottom:46px; }
+  #start-overlay.hidden #start-credit { visibility:hidden; }
   @media (prefers-reduced-motion:reduce) {
     #start-bubbles span { animation:none; top:var(--still); opacity:.72; }
     #start-overlay { transition:none; }
@@ -349,8 +357,7 @@
     <div id="score-display">0</div>
     <div id="combo-display">Combo x2</div>
     <div id="encouragement" role="status" hidden>
-      <span id="encouragement-fr"></span>
-      <span id="encouragement-translation" lang="en"></span>
+      <span id="encouragement-text"></span>
     </div>
   </div>
 
@@ -381,10 +388,12 @@
     </select>
     <div id="start-hint">Tape les bulles douces.<br>Glisse sur les bulles dorées.</div>
     </div>
+    <a id="start-credit" href="https://emmanuelpayet.art" target="_blank" rel="noopener noreferrer">emmanuelpayet.art</a>
   </div>
 
   <img id="garden-tree-atlas" src="assets/bonsais.webp" alt="" hidden>
   <img id="garden-maple-leaf" src="assets/feuille-erable.webp" alt="" hidden>
+  <img id="garden-sprout-atlas" src="assets/pousses-bonsais.webp" alt="" hidden>
   <img id="garden-tree-bare" src="assets/bonsais-nus.webp" alt="" hidden>
   <img id="garden-tree-growing" src="assets/bonsais-en-pousse.webp" alt="" hidden>
   <img id="garden-landscapes-1" src="assets/jardins-1.webp" alt="" hidden>
@@ -474,6 +483,7 @@
   </div>
 </div>
 
+<script src="src/localization.js"></script>
 <script src="src/quotes.js"></script>
 <script src="src/encouragements.js"></script>
 <script src="src/theme_moonlit.js"></script>

@@ -48,7 +48,8 @@ const Garden = (() => {
 
       const isComplete = state.completedSpecies.includes(i);
       const locked = isLocked(i, state);
-      const label = species.name + (locked ? " · Aperçu du jardin" : "");
+      const label = GameLanguage.item("species", i, species.name) +
+        (locked ? " · " + GameLanguage.text("preview") : "");
       chip.title = label;
       chip.setAttribute("aria-label", label);
       chip.setAttribute("aria-pressed", String(selectedSpecies === i));
@@ -104,7 +105,7 @@ const Garden = (() => {
     const maxLevel = Bonsai.getLevelsPerTree();
     const level = speciesLevel(state, selectedSpecies);
     imageLock.hidden = !isLocked(selectedSpecies, state);
-    description.textContent = species.name + " (" + species.nameJp + ") · " +
+    description.textContent = GameLanguage.item("species", selectedSpecies, species.name) + " (" + species.nameJp + ") · " +
       GardenScene.getName(selectedSpecies);
     canvas.setAttribute("aria-labelledby", description.id);
     progressFill.style.width = (level / maxLevel * 100) + "%";
@@ -139,10 +140,11 @@ const Garden = (() => {
   function animateSprout() {
     stopSprout();
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const start = performance.now();
+    // Laisse le panneau entrer à l’écran avant le début de la pousse.
+    const start = performance.now() + (reducedMotion ? 0 : 400);
 
     function animate(now) {
-      const elapsed = now - start;
+      const elapsed = Math.max(0, now - start);
       if (elapsed >= 2200) {
         stopSprout();
         render();
@@ -159,7 +161,7 @@ const Garden = (() => {
     sproutFrame = requestAnimationFrame(animate);
   }
 
-  function show(gainedLeaf = false) {
+  function show(playSprout = false) {
     const thought = getRandomQuote(lastThoughtId, BIBLICAL_THOUGHTS);
     lastThoughtId = thought.id;
     thoughtText.textContent = thought.text;
@@ -169,7 +171,7 @@ const Garden = (() => {
     document.getElementById("garden-overlay").classList.add("visible");
     refreshProgress();
     buildSpeciesRow();
-    if (gainedLeaf) animateSprout();
+    if (playSprout) animateSprout();
   }
 
   function hide() {
@@ -179,13 +181,13 @@ const Garden = (() => {
   }
 
   async function onSessionComplete() {
-    const leavesBefore = Bonsai.levelToLeafCount(Progress.getState().level);
+    const levelBefore = Progress.getState().level;
     const wasComplete = Progress.isCurrentTreeComplete();
     await Progress.advanceLevel();
     const isNowComplete = Progress.isCurrentTreeComplete();
     return {
       justCompletedTree: !wasComplete && isNowComplete,
-      gainedLeaf: Bonsai.levelToLeafCount(Progress.getState().level) > leavesBefore
+      gainedLevel: Progress.getState().level > levelBefore
     };
   }
 

@@ -92,7 +92,8 @@ const GardenScene = (() => {
       bare: document.getElementById("garden-tree-bare"),
       growing: document.getElementById("garden-tree-growing"),
       mature: document.getElementById("garden-tree-atlas"),
-      mapleLeaf: document.getElementById("garden-maple-leaf")
+      mapleLeaf: document.getElementById("garden-maple-leaf"),
+      sproutAtlas: document.getElementById("garden-sprout-atlas")
     };
   }
 
@@ -119,6 +120,11 @@ const GardenScene = (() => {
 
     if (sprout) {
       const [anchorX, anchorY, leafX, leafY] = sproutBranches[speciesIndex];
+      const image = speciesIndex === 0 ? trees.mapleLeaf : trees.sproutAtlas;
+      if (!image.naturalWidth) return;
+      const cell = speciesIndex - 1;
+      const width = image.naturalWidth / (speciesIndex === 0 ? 1 : 3);
+      const height = image.naturalHeight / (speciesIndex === 0 ? 1 : 2);
       ctx.save();
       ctx.translate(x - drawnWidth / 2, base - drawnHeight);
       ctx.scale(drawnWidth / 100, drawnHeight / 100);
@@ -126,8 +132,12 @@ const GardenScene = (() => {
       Bonsai.drawSprout(ctx, {
         anchorX, anchorY, x: leafX, y: leafY,
         size: 8.6, rot: 0.82, colorIdx: 2
-      }, Bonsai.getSpecies(speciesIndex), sprout.progress,
-      speciesIndex === 0 ? trees.mapleLeaf : undefined);
+      }, Bonsai.getSpecies(speciesIndex), sprout.progress, {
+        image, width, height,
+        x: speciesIndex === 0 ? 0 : (cell % 3) * width,
+        y: speciesIndex === 0 ? 0 : Math.floor(cell / 3) * height,
+        base: speciesIndex === 0 ? 0.99 : 0.925
+      });
       ctx.restore();
     }
   }
@@ -149,7 +159,7 @@ const GardenScene = (() => {
   }
 
   function getName(speciesIndex) {
-    return scenes[speciesIndex].name;
+    return GameLanguage.item("scenes", speciesIndex, scenes[speciesIndex].name);
   }
 
   return { draw, drawTree, getName, getTreeImages };

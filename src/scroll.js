@@ -131,11 +131,13 @@ const Scroll = (() => {
 
   // ---- Texte multi-lignes avec retour automatique ----
   function wrapText(ctx, text, maxWidth) {
-    const words = text.split(" ");
+    const japanese = document.documentElement.lang === "ja";
+    const separator = japanese ? "" : " ";
+    const words = japanese ? Array.from(text) : text.split(" ");
     const lines = [];
     let current = "";
     for (const word of words) {
-      const test = current ? current + " " + word : word;
+      const test = current ? current + separator + word : word;
       if (ctx.measureText(test).width > maxWidth && current) {
         lines.push(current);
         current = word;
@@ -240,10 +242,10 @@ const Scroll = (() => {
       if ("letterSpacing" in ctx) {
         ctx.save();
         ctx.letterSpacing = "3px";
-        ctx.fillText("SAGESSE RÉCOLTÉE", cx, topY + 70);
+        ctx.fillText(GameLanguage.text("wisdom"), cx, topY + 70);
         ctx.restore();
       } else {
-        drawSpacedText(ctx, "SAGESSE RÉCOLTÉE", cx, topY + 70, 3);
+        drawSpacedText(ctx, GameLanguage.text("wisdom"), cx, topY + 70, 3);
       }
 
       // citation (wrap automatique)
@@ -259,12 +261,12 @@ const Scroll = (() => {
       // auteur
       ctx.fillStyle = "#8a7245";
       ctx.font = "italic 12px 'Hiragino Mincho ProN', serif";
-      ctx.fillText("— " + quote.author, cx, ly + 14);
+      ctx.fillText("— " + quote.author, cx, ly + 14, paperW - 36);
 
       // score
       ctx.fillStyle = "#6b5a3a";
       ctx.font = "13px sans-serif";
-      ctx.fillText("Score : " + score, cx, topY + fullH - 36);
+      ctx.fillText(GameLanguage.text("score") + " · " + score, cx, topY + fullH - 36);
     }
 
     ctx.restore(); // fin clip

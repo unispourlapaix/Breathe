@@ -98,5 +98,13 @@ const BIBLICAL_THOUGHTS = [
 
 function getRandomQuote(excludeId, quotes = QUOTE_BANK) {
   const pool = quotes.filter(quote => quote.id !== excludeId);
-  return pool[Math.floor(Math.random() * pool.length)];
+  const quote = pool[Math.floor(Math.random() * pool.length)];
+  const index = quotes.indexOf(quote);
+  const biblical = quotes === BIBLICAL_THOUGHTS;
+  return {
+    id: quote.id,
+    text: GameLanguage.item(biblical ? "thoughts" : "quotes", index, quote.text),
+    author: biblical ? GameLanguage.text("proverbs") + " " + quote.id.slice(3)
+      : GameLanguage.text(quote.author)
+  };
 }

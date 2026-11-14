@@ -11,8 +11,7 @@
   const scoreDisplay = document.getElementById("score-display");
   const comboDisplay = document.getElementById("combo-display");
   const encouragement = document.getElementById("encouragement");
-  const encouragementFr = document.getElementById("encouragement-fr");
-  const encouragementTranslation = document.getElementById("encouragement-translation");
+  const encouragementText = document.getElementById("encouragement-text");
   const encouragementLanguage = document.getElementById("encouragement-language");
   const encouragementLanguageKey = "breathe-encouragement-language";
   try {
@@ -43,13 +42,47 @@
   function translateStartMenu() {
     const language = encouragementLanguage.value;
     const [subtitle, play, garden, meditation, label, tap, swipe] = startMenuTranslations[language];
-    document.getElementById("start-overlay").lang = language;
+    document.documentElement.lang = language;
     document.getElementById("start-sub").textContent = subtitle;
     document.getElementById("start-play").textContent = play;
     document.getElementById("start-garden-btn").textContent = garden;
     document.getElementById("start-meditation-btn").textContent = meditation;
     encouragementLanguage.setAttribute("aria-label", label);
     document.getElementById("start-hint").replaceChildren(tap, document.createElement("br"), swipe);
+    const menuText = {
+      "meditation-title": meditation,
+      "med-choice-breathing .meditation-choice-title": GameLanguage.text("breathTitle"),
+      "med-choice-breathing .meditation-choice-desc": GameLanguage.text("breathDesc"),
+      "med-choice-bodyscan .meditation-choice-title": GameLanguage.text("scanTitle"),
+      "med-choice-bodyscan .meditation-choice-desc": GameLanguage.text("scanDesc"),
+      "med-breath-message": GameLanguage.text("breathMessage"),
+      "med-breath-phase-label": GameLanguage.text("Inspire"),
+      "med-scan-progress": GameLanguage.text("step") + " 1 / 15",
+      "med-scan-zone": GameLanguage.item("zones", 0, "Le crâne et le cuir chevelu"),
+      "med-scan-instruction": GameLanguage.item("instructions", 0, "Fronce doucement le cuir chevelu."),
+      "med-scan-phase-badge": GameLanguage.text("hold"),
+      "med-scan-skip": GameLanguage.text("skip"),
+      "med-scan-finished-title": GameLanguage.text("finished"),
+      "med-scan-finished-text": GameLanguage.text("finishedText"),
+      "med-scan-restart": GameLanguage.text("restart"),
+      "calm-message": GameLanguage.text("calmMessage"),
+      "calm-phase-label": GameLanguage.text("Inspire"),
+      "calm-resume-btn": GameLanguage.text("resume"),
+      "end-card-replay": GameLanguage.text("replay"),
+      "combo-display": GameLanguage.text("combo") + " ×2"
+    };
+    for (const [selector, value] of Object.entries(menuText)) {
+      const parts = value.split("\n");
+      const element = document.querySelector("#" + selector);
+      if (parts.length === 1) element.textContent = value;
+      else element.replaceChildren(parts[0], document.createElement("br"), parts[1]);
+    }
+    for (const [id, key] of [
+      ["garden-back-btn", "back"], ["meditation-back-btn", "back"],
+      ["garden-image-lock", "locked"], ["garden-progress-bar", "growth"]
+    ]) {
+      document.getElementById(id).setAttribute("aria-label", GameLanguage.text(key));
+    }
   }
 
   translateStartMenu();
@@ -110,7 +143,7 @@
     scoreDisplay.textContent = score;
 
     if (comboCount > 1) {
-      comboDisplay.textContent = "Combo x" + comboCount;
+      comboDisplay.textContent = GameLanguage.text("combo") + " ×" + comboCount;
       comboDisplay.classList.add("show");
       clearTimeout(comboDisplay._hideTimeout);
       comboDisplay._hideTimeout = setTimeout(() => comboDisplay.classList.remove("show"), 1000);
@@ -130,11 +163,10 @@
       ? Math.floor(Math.random() * count)
       : (lastEncouragement + offset) % count;
     const [french, english] = ENCOURAGEMENTS[lastEncouragement];
-    const language = encouragementLanguage.value === "fr" ? "en" : encouragementLanguage.value;
+    const language = encouragementLanguage.value;
     const translationIndex = ENCOURAGEMENT_LANGUAGES.indexOf(language) - 1;
-    encouragementFr.textContent = french;
-    encouragementTranslation.textContent = ENCOURAGEMENT_TRANSLATIONS[lastEncouragement][translationIndex] ?? english;
-    encouragementTranslation.lang = language;
+    encouragementText.textContent = language === "fr" ? french
+      : ENCOURAGEMENT_TRANSLATIONS[lastEncouragement][translationIndex] ?? english;
     encouragement.hidden = false;
     clearTimeout(encouragementTimer);
     encouragementTimer = setTimeout(() => { encouragement.hidden = true; }, 3500);
@@ -221,7 +253,7 @@
       Scroll.draw(ctx, viewW / 2, viewH / 2, Math.min(viewW - 50, 320), currentQuote, score);
       if (Scroll.getAppearProgress() > 0.85 && !endReplayBtn.classList.contains("visible") && sessionReward) {
         endReplayBtn.classList.add("visible");
-        endReplayBtn.textContent = "Continuer";
+        endReplayBtn.textContent = GameLanguage.text("roundContinue");
         endReplayBtn.style.left = "50%";
         endReplayBtn.style.top = (viewH / 2 + 150) + "px";
         endReplayBtn.style.transform = "translateX(-50%)";
@@ -281,7 +313,7 @@
       if (result.justCompletedTree) {
         currentQuote = {
           text: currentQuote.text,
-          author: currentQuote.author + " — ton arbre a atteint sa pleine maturité 🌳"
+          author: currentQuote.author + " — " + GameLanguage.text("mature")
         };
       }
     });
@@ -360,7 +392,7 @@
   endReplayBtn.addEventListener("click", () => {
     if (!sessionEnded || !sessionReward) return;
     returnToMenu();
-    if (sessionReward.gainedLeaf) Garden.show(true);
+    if (sessionReward.gainedLevel) Garden.show(true);
   });
 
   const startGardenBtn = document.getElementById("start-garden-btn");
@@ -383,16 +415,16 @@
     const state = Calm.updateBreathing(16);
     if (!state) return; // l'overlay a été fermé entre-temps
 
-    calmPhaseLabel.textContent = state.label;
+    calmPhaseLabel.textContent = GameLanguage.text(state.label);
     calmPhaseSeconds.textContent = state.secondsLeft;
     calmCircle.style.transform = "scale(" + state.scale + ")";
 
     if (state.cyclesCompleted >= MIN_CYCLES_BEFORE_RESUME) {
       calmResumeBtn.classList.add("ready");
-      calmCyclesLabel.textContent = "Tu peux reprendre quand tu es prêt";
+      calmCyclesLabel.textContent = GameLanguage.text("ready");
     } else {
       const remaining = MIN_CYCLES_BEFORE_RESUME - state.cyclesCompleted;
-      calmCyclesLabel.textContent = remaining + " cycle" + (remaining > 1 ? "s" : "") + " avant de pouvoir reprendre";
+      calmCyclesLabel.textContent = GameLanguage.text("cycles") + " · " + remaining;
     }
 
     calmAnimFrame = requestAnimationFrame(calmLoop);
@@ -465,7 +497,7 @@
     const prevPhase = MED_BREATH_CYCLE[(medBreathPhaseIndex - 1 + MED_BREATH_CYCLE.length) % MED_BREATH_CYCLE.length];
     const scale = prevPhase.scaleTo + (updatedPhase.scaleTo - prevPhase.scaleTo) * eased;
 
-    medBreathPhaseLabel.textContent = updatedPhase.label;
+    medBreathPhaseLabel.textContent = GameLanguage.text(updatedPhase.label);
     medBreathPhaseSeconds.textContent = Math.ceil(updatedPhase.duration - updatedElapsed);
     medBreathCircle.style.transform = "scale(" + scale + ")";
   }
@@ -483,11 +515,11 @@
           medScanContainer.querySelectorAll(":scope > *:not(#med-scan-finished)").forEach(el => el.style.display = "none");
           medScanFinished.classList.add("visible");
         } else {
-          medScanProgress.textContent = "Étape " + (state.stepIndex + 1) + " / " + state.totalSteps;
-          medScanZone.textContent = state.zone;
-          medScanInstruction.textContent = state.instruction;
+          medScanProgress.textContent = GameLanguage.text("step") + " " + (state.stepIndex + 1) + " / " + state.totalSteps;
+          medScanZone.textContent = GameLanguage.item("zones", state.stepIndex, state.zone);
+          medScanInstruction.textContent = GameLanguage.item("instructions", state.stepIndex, state.instruction);
           medScanSeconds.textContent = state.secondsLeft;
-          medScanPhaseBadge.textContent = state.phase === "hold" ? "Contracte" : "Relâche et ressens";
+          medScanPhaseBadge.textContent = GameLanguage.text(state.phase);
           medScanPhaseBadge.className = state.phase;
         }
       }
