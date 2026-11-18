@@ -83,6 +83,7 @@ const LOCALIZED_TEXT = {
     "roundContinue": ["Continuer","Continue","続ける","Continuar","Continuar"],
     "replay": ["Rejouer","Play again","もう一度遊ぶ","Volver a jugar","Jogar de novo"],
     "back": ["Retour","Back","戻る","Volver","Voltar"],
+    "inspectTree": ["Observer le bonsaï","Inspect the bonsai","盆栽を観察する","Observar el bonsái","Observar o bonsai"],
     "locked": ["Bonsaï verrouillé","Locked bonsai","未解放の盆栽","Bonsái bloqueado","Bonsai bloqueado"],
     "growth": ["Croissance du bonsaï","Bonsai growth","盆栽の成長","Crecimiento del bonsái","Crescimento do bonsai"],
     "preview": ["Aperçu du jardin","Garden preview","庭のプレビュー","Vista previa del jardín","Prévia do jardim"],

@@ -6,6 +6,7 @@ const Garden = (() => {
   let selectedSpecies = 0;
   let sproutFrame, sprout;
   let description, imageLock, thoughtText, thoughtSource, lastThoughtId;
+  let inspectButton, detailDialog, detailCanvas, detailTitle;
 
   function init() {
     canvas = document.getElementById("garden-canvas");
@@ -32,6 +33,15 @@ const Garden = (() => {
     imageLock = document.getElementById("garden-image-lock");
     thoughtText = document.getElementById("garden-thought-text");
     thoughtSource = document.getElementById("garden-thought-source");
+    inspectButton = document.getElementById("garden-inspect");
+    detailDialog = document.getElementById("garden-detail-dialog");
+    detailCanvas = document.getElementById("garden-detail-canvas");
+    detailTitle = document.getElementById("garden-detail-title");
+    inspectButton.addEventListener("click", () => {
+      if (!visible || detailDialog.open) return;
+      renderDetail();
+      detailDialog.showModal();
+    });
 
     new ResizeObserver(render).observe(canvas.parentElement);
   }
@@ -108,6 +118,7 @@ const Garden = (() => {
     description.textContent = GameLanguage.item("species", selectedSpecies, species.name) + " (" + species.nameJp + ") · " +
       GardenScene.getName(selectedSpecies);
     canvas.setAttribute("aria-labelledby", description.id);
+    inspectButton.setAttribute("aria-label", GameLanguage.text("inspectTree") + " : " + GameLanguage.item("species", selectedSpecies, species.name));
     progressFill.style.width = (level / maxLevel * 100) + "%";
     progressBar.setAttribute("aria-valuenow", level);
     progressBar.setAttribute("aria-valuemax", maxLevel);
@@ -129,6 +140,23 @@ const Garden = (() => {
 
     const state = Progress.getState();
     GardenScene.draw(ctx, width, height, landscapes, trees, selectedSpecies, speciesLevel(state, selectedSpecies), sprout);
+    if (detailDialog.open) renderDetail();
+  }
+
+  function renderDetail() {
+    const species = Bonsai.getSpecies(selectedSpecies);
+    detailTitle.textContent = GameLanguage.item("species", selectedSpecies, species.name);
+    detailDialog.querySelector("button").setAttribute("aria-label", GameLanguage.text("back"));
+    const detail = detailCanvas.getContext("2d");
+    detail.clearRect(0, 0, detailCanvas.width, detailCanvas.height);
+    detail.imageSmoothingEnabled = false;
+    const level = speciesLevel(Progress.getState(), selectedSpecies);
+    const atlas = level === 0 ? trees.bare
+      : level >= Bonsai.getLevelsPerTree() ? trees.mature : trees.growing;
+    if (!atlas.naturalWidth) return;
+    const ratio = atlas.naturalWidth / (2 * atlas.naturalHeight);
+    const size = Math.floor(Math.min(610, 610 / ratio));
+    GardenScene.drawTree(detail, trees, selectedSpecies, 320, Math.round(320 + size / 2), size, level);
   }
 
   function stopSprout() {
@@ -176,6 +204,7 @@ const Garden = (() => {
 
   function hide() {
     stopSprout();
+    if (detailDialog.open) detailDialog.close();
     visible = false;
     document.getElementById("garden-overlay").classList.remove("visible");
   }

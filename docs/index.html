@@ -208,6 +208,18 @@
     box-shadow:0 6px 16px #754d731a;
   }
   #garden-canvas { width:100%; height:100%; }
+  #garden-inspect { position:absolute; inset:0; border:0; background:none; cursor:zoom-in; }
+  #garden-inspect:focus-visible { outline:3px solid #fff8e3; outline-offset:-5px; }
+  #garden-detail-dialog {
+    margin:auto; box-sizing:border-box; width:min(640px,calc(100vw - 24px)); max-height:calc(100dvh - 24px);
+    padding:12px 16px 16px; overflow:auto; color:#694968; background:#fff8f4;
+    border:1px solid #d5b2cc; border-radius:20px;
+  }
+  #garden-detail-dialog::backdrop { background:#1a1324bd; }
+  #garden-detail-dialog header { display:flex;align-items:center;justify-content:space-between;gap:10px; }
+  #garden-detail-title { margin:0;font:700 18px/1.2 Georgia,serif; }
+  #garden-detail-dialog button { min-width:44px;min-height:44px;border:1px solid #d5b2cc;border-radius:50%;background:#fff;color:#694968;cursor:pointer; }
+  #garden-detail-canvas { display:block;width:auto;height:min(70dvh,560px);max-width:100%;margin:auto;object-fit:contain;image-rendering:pixelated; }
   #garden-image-lock {
     position:absolute; top:10px; right:10px; padding:7px 9px;
     border-radius:50%; background:#fff5f3; color:#59465b;
@@ -409,8 +421,16 @@
     <h2 id="garden-description"></h2>
     <div id="garden-canvas-wrap">
       <canvas id="garden-canvas" role="img"></canvas>
+      <button id="garden-inspect" type="button" aria-haspopup="dialog" aria-label="Observer le bonsaï"></button>
       <span id="garden-image-lock" role="img" aria-label="Bonsaï verrouillé" hidden>🔒</span>
     </div>
+    <dialog id="garden-detail-dialog" aria-labelledby="garden-detail-title">
+      <header>
+        <h2 id="garden-detail-title"></h2>
+        <form method="dialog"><button aria-label="Retour">✕</button></form>
+      </header>
+      <canvas id="garden-detail-canvas" width="640" height="640" role="img" aria-labelledby="garden-detail-title"></canvas>
+    </dialog>
     <div id="garden-details">
       <blockquote id="garden-thought">
         <p id="garden-thought-text"></p>
@@ -573,6 +593,7 @@ const LOCALIZED_TEXT = {
     "roundContinue": ["Continuer","Continue","続ける","Continuar","Continuar"],
     "replay": ["Rejouer","Play again","もう一度遊ぶ","Volver a jugar","Jogar de novo"],
     "back": ["Retour","Back","戻る","Volver","Voltar"],
+    "inspectTree": ["Observer le bonsaï","Inspect the bonsai","盆栽を観察する","Observar el bonsái","Observar o bonsai"],
     "locked": ["Bonsaï verrouillé","Locked bonsai","未解放の盆栽","Bonsái bloqueado","Bonsai bloqueado"],
     "growth": ["Croissance du bonsaï","Bonsai growth","盆栽の成長","Crecimiento del bonsái","Crescimento do bonsai"],
     "preview": ["Aperçu du jardin","Garden preview","庭のプレビュー","Vista previa del jardín","Prévia do jardim"],
@@ -3214,6 +3235,7 @@ const Garden = (() => {
   let selectedSpecies = 0;
   let sproutFrame, sprout;
   let description, imageLock, thoughtText, thoughtSource, lastThoughtId;
+  let inspectButton, detailDialog, detailCanvas, detailTitle;
 
   function init() {
     canvas = document.getElementById("garden-canvas");
@@ -3240,6 +3262,15 @@ const Garden = (() => {
     imageLock = document.getElementById("garden-image-lock");
     thoughtText = document.getElementById("garden-thought-text");
     thoughtSource = document.getElementById("garden-thought-source");
+    inspectButton = document.getElementById("garden-inspect");
+    detailDialog = document.getElementById("garden-detail-dialog");
+    detailCanvas = document.getElementById("garden-detail-canvas");
+    detailTitle = document.getElementById("garden-detail-title");
+    inspectButton.addEventListener("click", () => {
+      if (!visible || detailDialog.open) return;
+      renderDetail();
+      detailDialog.showModal();
+    });
 
     new ResizeObserver(render).observe(canvas.parentElement);
   }
@@ -3316,6 +3347,7 @@ const Garden = (() => {
     description.textContent = GameLanguage.item("species", selectedSpecies, species.name) + " (" + species.nameJp + ") · " +
       GardenScene.getName(selectedSpecies);
     canvas.setAttribute("aria-labelledby", description.id);
+    inspectButton.setAttribute("aria-label", GameLanguage.text("inspectTree") + " : " + GameLanguage.item("species", selectedSpecies, species.name));
     progressFill.style.width = (level / maxLevel * 100) + "%";
     progressBar.setAttribute("aria-valuenow", level);
     progressBar.setAttribute("aria-valuemax", maxLevel);
@@ -3337,6 +3369,23 @@ const Garden = (() => {
 
     const state = Progress.getState();
     GardenScene.draw(ctx, width, height, landscapes, trees, selectedSpecies, speciesLevel(state, selectedSpecies), sprout);
+    if (detailDialog.open) renderDetail();
+  }
+
+  function renderDetail() {
+    const species = Bonsai.getSpecies(selectedSpecies);
+    detailTitle.textContent = GameLanguage.item("species", selectedSpecies, species.name);
+    detailDialog.querySelector("button").setAttribute("aria-label", GameLanguage.text("back"));
+    const detail = detailCanvas.getContext("2d");
+    detail.clearRect(0, 0, detailCanvas.width, detailCanvas.height);
+    detail.imageSmoothingEnabled = false;
+    const level = speciesLevel(Progress.getState(), selectedSpecies);
+    const atlas = level === 0 ? trees.bare
+      : level >= Bonsai.getLevelsPerTree() ? trees.mature : trees.growing;
+    if (!atlas.naturalWidth) return;
+    const ratio = atlas.naturalWidth / (2 * atlas.naturalHeight);
+    const size = Math.floor(Math.min(610, 610 / ratio));
+    GardenScene.drawTree(detail, trees, selectedSpecies, 320, Math.round(320 + size / 2), size, level);
   }
 
   function stopSprout() {
@@ -3384,6 +3433,7 @@ const Garden = (() => {
 
   function hide() {
     stopSprout();
+    if (detailDialog.open) detailDialog.close();
     visible = false;
     document.getElementById("garden-overlay").classList.remove("visible");
   }
