@@ -83,6 +83,8 @@ const LOCALIZED_TEXT = {
     "roundContinue": ["Continuer","Continue","続ける","Continuar","Continuar"],
     "replay": ["Rejouer","Play again","もう一度遊ぶ","Volver a jugar","Jogar de novo"],
     "back": ["Retour","Back","戻る","Volver","Voltar"],
+    "affirmTitle": ["Encouragements","Affirmations","励ましの言葉","Afirmaciones","Afirmações"],
+    "affirmDesc": ["192 pensées à lire à ton rythme.","192 affirmations in French, at your own pace.","フランス語の励ましの言葉192選を、自分のペースで。","192 afirmaciones en francés, a tu ritmo.","192 afirmações em francês, ao teu ritmo."],
     "inspectTree": ["Observer le bonsaï","Inspect the bonsai","盆栽を観察する","Observar el bonsái","Observar o bonsai"],
     "locked": ["Bonsaï verrouillé","Locked bonsai","未解放の盆栽","Bonsái bloqueado","Bonsai bloqueado"],
     "growth": ["Croissance du bonsaï","Bonsai growth","盆栽の成長","Crecimiento del bonsái","Crescimento do bonsai"],

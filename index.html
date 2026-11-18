@@ -118,6 +118,11 @@
     padding:0 24px;
   }
   #meditation-exercise-view.visible { display:flex; }
+  #meditation-menu, #meditation-exercise-view { min-height:0; overflow-y:auto; }
+  #med-affirm-container:not([hidden]) { display:grid; align-content:center; justify-items:center; gap:16px; width:min(92%,480px); margin:auto; padding:16px 0; text-align:center; color:#334d40; }
+  #med-affirm-text { margin:0; font:600 clamp(20px,5vw,32px)/1.4 Georgia,serif; }
+  #med-affirm-controls { display:flex; align-items:center; gap:14px; }
+  #med-affirm-controls button { min-width:44px; min-height:44px; border:1px solid #8ca79a; border-radius:50%; color:#334d40; background:#f8fcf6; cursor:pointer; }
 
   #med-breath-message { color:#5a6a5a; font-size:14px; text-align:center; margin-bottom:30px; line-height:1.6; }
 
@@ -454,6 +459,11 @@
     </div>
 
     <div id="meditation-menu">
+      <button class="meditation-choice-card" id="med-choice-affirm">
+        <div class="meditation-choice-icon" aria-hidden="true">🌿</div>
+        <div class="meditation-choice-title">Encouragements</div>
+        <div class="meditation-choice-desc">192 pensées à lire à ton rythme.</div>
+      </button>
       <button class="meditation-choice-card" id="med-choice-breathing">
         <div class="meditation-choice-icon">🌬️</div>
         <div class="meditation-choice-title">Respiration guidée</div>
@@ -467,6 +477,14 @@
     </div>
 
     <div id="meditation-exercise-view">
+      <section id="med-affirm-container" lang="fr" hidden>
+        <p id="med-affirm-text" aria-live="polite"></p>
+        <div id="med-affirm-controls">
+          <button id="med-affirm-prev" type="button" aria-label="Pensée précédente">←</button>
+          <span id="med-affirm-count"></span>
+          <button id="med-affirm-next" type="button" aria-label="Pensée suivante">→</button>
+        </div>
+      </section>
       <div id="med-breath-container" style="display:none; flex-direction:column; align-items:center;">
         <div id="med-breath-message">Respire à ton rythme.<br>Aucune limite de temps, arrête-toi quand tu veux.</div>
         <div id="calm-circle-wrap-med" style="width:160px;height:160px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:20px;">
@@ -510,6 +528,7 @@
 <script src="src/localization.js"></script>
 <script src="src/quotes.js"></script>
 <script src="src/encouragements.js"></script>
+<script src="src/meditation-affirmations.js"></script>
 <script src="src/theme_moonlit.js"></script>
 <script src="src/scenery.js"></script>
 <script src="src/bubbles.js"></script>

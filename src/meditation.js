@@ -56,6 +56,10 @@ const Meditation = (() => {
     activeExercise = "breathing";
   }
 
+  function startAffirmations() {
+    activeExercise = "affirmations";
+  }
+
   function startBodyScan() {
     activeExercise = "bodyscan";
     scanStepIndex = 0;
@@ -124,7 +128,7 @@ const Meditation = (() => {
 
   return {
     init, show, hide, isVisible,
-    startBreathing, startBodyScan, backToMenu, getActiveExercise,
+    startBreathing, startBodyScan, startAffirmations, backToMenu, getActiveExercise,
     updateBodyScan, skipToNextStep, getBodyScanStepCount
   };
 })();

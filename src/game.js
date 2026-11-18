@@ -51,6 +51,8 @@
     document.getElementById("start-hint").replaceChildren(tap, document.createElement("br"), swipe);
     const menuText = {
       "meditation-title": meditation,
+      "med-choice-affirm .meditation-choice-title": GameLanguage.text("affirmTitle"),
+      "med-choice-affirm .meditation-choice-desc": GameLanguage.text("affirmDesc"),
       "med-choice-breathing .meditation-choice-title": GameLanguage.text("breathTitle"),
       "med-choice-breathing .meditation-choice-desc": GameLanguage.text("breathDesc"),
       "med-choice-bodyscan .meditation-choice-title": GameLanguage.text("scanTitle"),
@@ -455,6 +457,25 @@
   const meditationBackBtn = document.getElementById("meditation-back-btn");
   const meditationMenu = document.getElementById("meditation-menu");
   const meditationExerciseView = document.getElementById("meditation-exercise-view");
+  const medAffirmContainer = document.getElementById("med-affirm-container");
+  const medAffirmText = document.getElementById("med-affirm-text");
+  const medAffirmCount = document.getElementById("med-affirm-count");
+  let affirmIndex = 0;
+
+  function renderAffirmation(delta = 0) {
+    const count = MEDITATION_AFFIRMATIONS.length;
+    affirmIndex = (affirmIndex + delta + count) % count;
+    medAffirmText.textContent = MEDITATION_AFFIRMATIONS[affirmIndex];
+    medAffirmCount.textContent = (affirmIndex + 1) + " / " + count;
+  }
+
+  document.getElementById("med-choice-affirm").addEventListener("click", () => {
+    Meditation.startAffirmations();
+    showMeditationExercise("affirmations");
+    document.getElementById("med-affirm-next").focus();
+  });
+  document.getElementById("med-affirm-prev").addEventListener("click", () => renderAffirmation(-1));
+  document.getElementById("med-affirm-next").addEventListener("click", () => renderAffirmation(1));
   const medChoiceBreathing = document.getElementById("med-choice-breathing");
   const medChoiceBodyscan = document.getElementById("med-choice-bodyscan");
   const medBreathContainer = document.getElementById("med-breath-container");
@@ -531,6 +552,7 @@
   function showMeditationExercise(exercise) {
     meditationMenu.style.display = "none";
     meditationExerciseView.classList.add("visible");
+    medAffirmContainer.hidden = exercise !== "affirmations";
     medBreathContainer.style.display = exercise === "breathing" ? "flex" : "none";
     medScanContainer.style.display = exercise === "bodyscan" ? "flex" : "none";
 
@@ -542,8 +564,9 @@
       medScanContainer.querySelectorAll(":scope > *:not(#med-scan-finished)").forEach(el => el.style.display = "");
     }
 
-    if (medAnimFrame) cancelAnimationFrame(medAnimFrame);
-    medLoop();
+    if (medAnimFrame) { cancelAnimationFrame(medAnimFrame); medAnimFrame = null; }
+    if (exercise === "affirmations") renderAffirmation();
+    else medLoop();
   }
 
   function showMeditationMenu() {
