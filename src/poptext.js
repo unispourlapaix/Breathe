@@ -8,10 +8,9 @@ const PopText = (() => {
 
   let texts = [];
 
-  // Onomatopées universelles, lisibles sans traduction (BD/manga international)
-  const WORDS_NORMAL = ["POP!", "PAF!", "PLIC!", "TOC!"];
-  const WORDS_CHAIN = ["BAM!", "BOOM!", "WAOUH!", "ZIP!", "PAN!"];
-  const WORDS_BONUS = ["YEAH!", "WOW!", "✦POP✦"];
+  const WORDS_NORMAL = ["pop0", "pop1", "pop2", "pop3"];
+  const WORDS_CHAIN = ["chain0", "chain1", "chain2", "chain3", "chain4"];
+  const WORDS_BONUS = ["bonus0", "bonus1", "bonus2"];
 
   function spawn(x, y, kind) {
     let word, color, baseSize;
@@ -31,7 +30,7 @@ const PopText = (() => {
 
     texts.push({
       id: "POPTXT-" + Math.random().toString(36).slice(2, 7),
-      word,
+      word: GameLanguage.text(word),
       x: x + (Math.random() - 0.5) * 10,
       y,
       vy: -0.9 - Math.random() * 0.4,

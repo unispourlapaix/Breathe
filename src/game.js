@@ -43,6 +43,7 @@
     const language = encouragementLanguage.value;
     const [subtitle, play, garden, meditation, label, tap, swipe] = startMenuTranslations[language];
     document.documentElement.lang = language;
+    document.getElementById("med-affirm-container").lang = language;
     document.getElementById("start-sub").textContent = subtitle;
     document.getElementById("start-play").textContent = play;
     document.getElementById("start-garden-btn").textContent = garden;
