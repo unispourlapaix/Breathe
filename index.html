@@ -28,6 +28,11 @@
     position:absolute; top:0; left:0; width:100%; height:100%;
     pointer-events:none; z-index:10;
   }
+  #sound-toggle {
+    position:absolute; right:12px; bottom:max(12px,env(safe-area-inset-bottom));
+    z-index:60; width:42px; height:42px; border:1px solid #b6cbbd;
+    border-radius:50%; background:#f5f8e9ed; cursor:pointer; font-size:21px;
+  }
   #score-display {
     position:absolute; top:14px; left:14px;
     font-size:20px; font-weight:600; color:#3d4a3d; line-height:1;
@@ -119,7 +124,22 @@
   }
   #meditation-exercise-view.visible { display:flex; }
   #meditation-menu, #meditation-exercise-view { min-height:0; overflow-y:auto; }
-  #med-affirm-container:not([hidden]) { display:grid; align-content:center; justify-items:center; gap:16px; width:min(92%,480px); margin:auto; padding:16px 0; text-align:center; color:#334d40; }
+  #med-affirm-container:not([hidden]) { position:relative; flex:1; width:100%; min-height:260px; text-align:center; color:#334d40; }
+  #med-affirm-bubbles { position:absolute; inset:0; overflow:hidden; }
+  #med-affirm-text { position:absolute; bottom:5%; left:0; width:100%; pointer-events:none; }
+  .meditation-bubble {
+    position:absolute; top:2%; width:76px; height:76px; border:0;
+    cursor:pointer; background:radial-gradient(ellipse at 28% 25%,#fffd 0 9%,transparent 15%),linear-gradient(135deg,#dfede4,#b8d4cf 60%,#8bb5a5);
+    clip-path:polygon(28% 4%,73% 0,98% 30%,94% 75%,64% 100%,21% 91%,0 56%,5% 25%);
+    animation:meditation-fall 3s linear forwards;
+  }
+  @keyframes meditation-fall { to { top:40%; transform:translateX(var(--drift)); } }
+  .meditation-bubble.popped { opacity:0; transition:opacity .3s; }
+  .meditation-bubble:focus-visible { outline:0; background:#f3d27a; }
+  @media (prefers-reduced-motion:reduce) {
+    .meditation-bubble { animation:none; top:25%; }
+    .meditation-bubble.popped { transition:none; }
+  }
   #med-affirm-text { margin:0; font:600 clamp(20px,5vw,32px)/1.4 Georgia,serif; }
   #med-affirm-controls { display:flex; align-items:center; gap:14px; }
   #med-affirm-controls button { min-width:44px; min-height:44px; border:1px solid #8ca79a; border-radius:50%; color:#334d40; background:#f8fcf6; cursor:pointer; }
@@ -372,6 +392,7 @@
 </head>
 <body>
 <div id="game-root">
+  <button id="sound-toggle" type="button" aria-label="Couper le son">🔊</button>
   <canvas id="game-canvas"></canvas>
 
   <div id="ui-overlay">
@@ -478,12 +499,8 @@
 
     <div id="meditation-exercise-view">
       <section id="med-affirm-container" lang="fr" hidden>
+        <div id="med-affirm-bubbles"></div>
         <p id="med-affirm-text" aria-live="polite"></p>
-        <div id="med-affirm-controls">
-          <button id="med-affirm-prev" type="button" aria-label="Pensée précédente">←</button>
-          <span id="med-affirm-count"></span>
-          <button id="med-affirm-next" type="button" aria-label="Pensée suivante">→</button>
-        </div>
       </section>
       <div id="med-breath-container" style="display:none; flex-direction:column; align-items:center;">
         <div id="med-breath-message">Respire à ton rythme.<br>Aucune limite de temps, arrête-toi quand tu veux.</div>
@@ -533,6 +550,7 @@
 <script src="src/scenery.js"></script>
 <script src="src/bubbles.js"></script>
 <script src="src/sound.js"></script>
+<script src="src/music.js"></script>
 <script src="src/heart.js"></script>
 <script src="src/scroll.js"></script>
 <script src="src/bonsai.js"></script>
@@ -542,6 +560,7 @@
 <script src="src/poptext.js"></script>
 <script src="src/calm.js"></script>
 <script src="src/meditation.js"></script>
+<script src="src/meditation-bubbles.js"></script>
 <script src="src/game.js"></script>
 </body>
 </html>

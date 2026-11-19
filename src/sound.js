@@ -1,5 +1,6 @@
 const GameSound = (() => {
-  let context, windGain, windFilter;
+  let context, windGain, windFilter, master;
+  let muted = false;
   let lastBeat = -1;
 
   function unlock() {
@@ -8,6 +9,9 @@ const GameSound = (() => {
     try {
       if (!context) {
         context = new AudioContext();
+        master = context.createGain();
+        master.gain.value = muted ? 0 : 1;
+        master.connect(context.destination);
         const buffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
         const samples = buffer.getChannelData(0);
         for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
@@ -20,7 +24,7 @@ const GameSound = (() => {
         windFilter.Q.value = 0.55;
         windGain = context.createGain();
         windGain.gain.value = 0;
-        noise.connect(windFilter).connect(windGain).connect(context.destination);
+        noise.connect(windFilter).connect(windGain).connect(master);
         noise.start();
       }
       if (context.state === "suspended") void context.resume().catch(() => {});
@@ -44,7 +48,7 @@ const GameSound = (() => {
       envelope.gain.setValueAtTime(0, start);
       envelope.gain.linearRampToValueAtTime(volume, start + 0.012);
       envelope.gain.exponentialRampToValueAtTime(0.0001, start + 0.17);
-      oscillator.connect(envelope).connect(context.destination);
+      oscillator.connect(envelope).connect(master);
       oscillator.start(start);
       oscillator.stop(start + 0.19);
       oscillator.onended = () => { oscillator.disconnect(); envelope.disconnect(); };
@@ -62,5 +66,10 @@ const GameSound = (() => {
     if (document.hidden) wind(0);
   });
 
-  return { unlock, pop, wind };
+  function setMuted(value) {
+    muted = value;
+    if (master) master.gain.setTargetAtTime(muted ? 0 : 1, context.currentTime, 0.03);
+  }
+
+  return { unlock, pop, wind, setMuted };
 })();

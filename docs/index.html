@@ -28,6 +28,11 @@
     position:absolute; top:0; left:0; width:100%; height:100%;
     pointer-events:none; z-index:10;
   }
+  #sound-toggle {
+    position:absolute; right:12px; bottom:max(12px,env(safe-area-inset-bottom));
+    z-index:60; width:42px; height:42px; border:1px solid #b6cbbd;
+    border-radius:50%; background:#f5f8e9ed; cursor:pointer; font-size:21px;
+  }
   #score-display {
     position:absolute; top:14px; left:14px;
     font-size:20px; font-weight:600; color:#3d4a3d; line-height:1;
@@ -119,7 +124,22 @@
   }
   #meditation-exercise-view.visible { display:flex; }
   #meditation-menu, #meditation-exercise-view { min-height:0; overflow-y:auto; }
-  #med-affirm-container:not([hidden]) { display:grid; align-content:center; justify-items:center; gap:16px; width:min(92%,480px); margin:auto; padding:16px 0; text-align:center; color:#334d40; }
+  #med-affirm-container:not([hidden]) { position:relative; flex:1; width:100%; min-height:260px; text-align:center; color:#334d40; }
+  #med-affirm-bubbles { position:absolute; inset:0; overflow:hidden; }
+  #med-affirm-text { position:absolute; bottom:5%; left:0; width:100%; pointer-events:none; }
+  .meditation-bubble {
+    position:absolute; top:2%; width:76px; height:76px; border:0;
+    cursor:pointer; background:radial-gradient(ellipse at 28% 25%,#fffd 0 9%,transparent 15%),linear-gradient(135deg,#dfede4,#b8d4cf 60%,#8bb5a5);
+    clip-path:polygon(28% 4%,73% 0,98% 30%,94% 75%,64% 100%,21% 91%,0 56%,5% 25%);
+    animation:meditation-fall 3s linear forwards;
+  }
+  @keyframes meditation-fall { to { top:40%; transform:translateX(var(--drift)); } }
+  .meditation-bubble.popped { opacity:0; transition:opacity .3s; }
+  .meditation-bubble:focus-visible { outline:0; background:#f3d27a; }
+  @media (prefers-reduced-motion:reduce) {
+    .meditation-bubble { animation:none; top:25%; }
+    .meditation-bubble.popped { transition:none; }
+  }
   #med-affirm-text { margin:0; font:600 clamp(20px,5vw,32px)/1.4 Georgia,serif; }
   #med-affirm-controls { display:flex; align-items:center; gap:14px; }
   #med-affirm-controls button { min-width:44px; min-height:44px; border:1px solid #8ca79a; border-radius:50%; color:#334d40; background:#f8fcf6; cursor:pointer; }
@@ -372,6 +392,7 @@
 </head>
 <body>
 <div id="game-root">
+  <button id="sound-toggle" type="button" aria-label="Couper le son">🔊</button>
   <canvas id="game-canvas"></canvas>
 
   <div id="ui-overlay">
@@ -478,12 +499,8 @@
 
     <div id="meditation-exercise-view">
       <section id="med-affirm-container" lang="fr" hidden>
+        <div id="med-affirm-bubbles"></div>
         <p id="med-affirm-text" aria-live="polite"></p>
-        <div id="med-affirm-controls">
-          <button id="med-affirm-prev" type="button" aria-label="Pensée précédente">←</button>
-          <span id="med-affirm-count"></span>
-          <button id="med-affirm-next" type="button" aria-label="Pensée suivante">→</button>
-        </div>
       </section>
       <div id="med-breath-container" style="display:none; flex-direction:column; align-items:center;">
         <div id="med-breath-message">Respire à ton rythme.<br>Aucune limite de temps, arrête-toi quand tu veux.</div>
@@ -608,6 +625,11 @@ const LOCALIZED_TEXT = {
     ["Sincere advice comforts like a familiar scent.","心からの助言は、懐かしい香りのように心を和ませる。","Un consejo sincero reconforta como un aroma familiar.","Um conselho sincero conforta como um aroma familiar."],
   ],
   ui: {
+    "breathComfort": ["Repères de 4 s / 6 s, sans forcer. Relâche plus tôt si besoin. En cas de gêne ou de vertige, arrête et respire normalement.", "4 s / 6 s are guides. Don’t force it. Release earlier if needed. Stop and breathe normally if uncomfortable or dizzy.", "4秒／6秒は目安です。無理せず、必要なら早めに指を離してください。不快感やめまいがあれば中止し、自然に呼吸しましょう。", "4 s / 6 s son orientativos. No fuerces. Suelta antes si lo necesitas. Si hay molestias o mareo, para y respira normalmente.", "4 s / 6 s são referências. Não force. Solte antes se precisar. Se sentir desconforto ou tontura, pare e respire normalmente."],
+    "pressInhale": ["Appuie et inspire · 4 s", "Press and breathe in · 4 s", "押しながら吸う · 4秒", "Pulsa e inhala · 4 s", "Pressione e inspire · 4 s"],
+    "keepInhaling": ["Maintiens et inspire doucement", "Hold down and breathe in gently", "押したままゆっくり吸って", "Mantén pulsado e inhala suavemente", "Mantenha pressionado e inspire suavemente"],
+    "releaseExhale": ["Relâche l’écran et expire", "Release the screen and breathe out", "指を離して吐いて", "Suelta la pantalla y exhala", "Solte a tela e expire"],
+    "relaxExhale": ["Expire doucement · laisse la bulle redescendre", "Breathe out gently · let the bubble shrink", "ゆっくり吐いて、泡を小さく", "Exhala suavemente · deja que la burbuja se reduzca", "Expire suavemente · deixe a bolha diminuir"],
     "roundContinue": ["Continuer","Continue","続ける","Continuar","Continuar"],
     "replay": ["Rejouer","Play again","もう一度遊ぶ","Volver a jugar","Jogar de novo"],
     "back": ["Retour","Back","戻る","Volver","Voltar"],
@@ -633,7 +655,7 @@ const LOCALIZED_TEXT = {
     "breathDesc": ["Suis le cercle qui grossit et rétrécit. Inspire, retiens, expire — à ton rythme, sans limite de temps.","Follow the circle as it grows and shrinks. Breathe in, hold, and breathe out at your own pace, with no time limit.","円の広がりと縮みに合わせて、吸って、止めて、吐きましょう。時間制限はありません。","Sigue el círculo mientras crece y se encoge. Inhala, retén y exhala a tu ritmo, sin límite de tiempo.","Acompanhe o círculo enquanto ele cresce e diminui. Inspire, segure e expire no seu ritmo, sem limite de tempo."],
     "scanTitle": ["Détente avant de dormir","Relax before sleep","眠る前のリラックス","Relajación antes de dormir","Relaxamento antes de dormir"],
     "scanDesc": ["Relaxation musculaire progressive. On détend chaque muscle, du crâne jusqu'aux orteils, pour préparer un sommeil paisible.","Progressive muscle relaxation from head to toe to prepare for restful sleep.","頭から足先まで順に筋肉を緩め、穏やかな眠りに備えましょう。","Relaja los músculos de la cabeza a los pies para prepararte para un sueño tranquilo.","Relaxe os músculos da cabeça aos pés para se preparar para um sono tranquilo."],
-    "breathMessage": ["Respire à ton rythme.\nAucune limite de temps, arrête-toi quand tu veux.","Breathe at your own pace.\nThere’s no time limit. Stop whenever you like.","自分のペースで呼吸しましょう。\n時間制限はありません。いつでも終われます。","Respira a tu ritmo.\nSin límite de tiempo. Para cuando quieras.","Respire no seu ritmo.\nSem limite de tempo. Pare quando quiser."],
+    "breathMessage": ["Maintiens pour inspirer pendant 4 s, puis relâche pour expirer pendant 6 s.\nContinue à ton rythme, arrête quand tu veux.","Hold down to breathe in for 4 s, then release to breathe out for 6 s.\nContinue at your own pace. Stop whenever you like.","4秒押して吸い、指を離して6秒吐きましょう。\n自分のペースで。いつでも終われます。","Mantén pulsado para inhalar durante 4 s y suelta para exhalar durante 6 s.\nSigue a tu ritmo y para cuando quieras.","Mantenha pressionado para inspirar por 4 s e solte para expirar por 6 s.\nContinue no seu ritmo e pare quando quiser."],
     "skip": ["Passer à l'étape suivante","Skip to next step","次のステップへ","Pasar al siguiente paso","Ir para a próxima etapa"],
     "finished": ["Tout ton corps est détendu","Your whole body is relaxed","全身がリラックスしました","Todo tu cuerpo está relajado","Seu corpo está relaxado"],
     "finishedText": ["Reste ainsi aussi longtemps que tu le souhaites.\nBonne nuit, ou bon retour à ta journée.","Stay here as long as you like.\nSleep well, or ease back into your day.","好きなだけこのままで。\nおやすみなさい。日中なら、ゆっくり日常へ戻りましょう。","Quédate así el tiempo que quieras.\nQue descanses o que sigas bien el día.","Fique assim pelo tempo que quiser.\nBoa noite ou uma boa volta ao seu dia."],
@@ -2058,7 +2080,8 @@ const Bubbles = (() => {
 
 
 const GameSound = (() => {
-  let context, windGain, windFilter;
+  let context, windGain, windFilter, master;
+  let muted = false;
   let lastBeat = -1;
 
   function unlock() {
@@ -2067,6 +2090,9 @@ const GameSound = (() => {
     try {
       if (!context) {
         context = new AudioContext();
+        master = context.createGain();
+        master.gain.value = muted ? 0 : 1;
+        master.connect(context.destination);
         const buffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
         const samples = buffer.getChannelData(0);
         for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
@@ -2079,7 +2105,7 @@ const GameSound = (() => {
         windFilter.Q.value = 0.55;
         windGain = context.createGain();
         windGain.gain.value = 0;
-        noise.connect(windFilter).connect(windGain).connect(context.destination);
+        noise.connect(windFilter).connect(windGain).connect(master);
         noise.start();
       }
       if (context.state === "suspended") void context.resume().catch(() => {});
@@ -2103,7 +2129,7 @@ const GameSound = (() => {
       envelope.gain.setValueAtTime(0, start);
       envelope.gain.linearRampToValueAtTime(volume, start + 0.012);
       envelope.gain.exponentialRampToValueAtTime(0.0001, start + 0.17);
-      oscillator.connect(envelope).connect(context.destination);
+      oscillator.connect(envelope).connect(master);
       oscillator.start(start);
       oscillator.stop(start + 0.19);
       oscillator.onended = () => { oscillator.disconnect(); envelope.disconnect(); };
@@ -2121,7 +2147,106 @@ const GameSound = (() => {
     if (document.hidden) wind(0);
   });
 
-  return { unlock, pop, wind };
+  function setMuted(value) {
+    muted = value;
+    if (master) master.gain.setTargetAtTime(muted ? 0 : 1, context.currentTime, 0.03);
+  }
+
+  return { unlock, pop, wind, setMuted };
+})();
+
+
+const BackgroundMusic = (() => {
+  const tracks = [
+    "l-appel-du-tres-haut.mp3", "la-paix-interieure-02.mp3", "la-paix-interieure.mp3",
+    "le-premier-souffle-02.mp3", "le-premier-souffle.mp3", "le-repos-de-l-ame.mp3",
+    "le-silence-de-dieu-02.mp3", "le-silence-de-dieu.mp3",
+    "le-vent-de-la-grace-02.mp3", "le-vent-de-la-grace.mp3"
+  ];
+  const audio = new Audio();
+  audio.volume = 0.3;
+  audio.preload = "none";
+  const button = document.getElementById("sound-toggle");
+  let muted = false;
+  let started = false;
+  let playing = false;
+  let queue = [];
+  let previous;
+  const failed = new Set();
+  try { muted = localStorage.getItem("breathe-muted") === "true"; } catch {}
+
+  function nextTrack() {
+    if (!queue.length) {
+      queue = tracks.filter(track => !failed.has(track));
+      for (let i = queue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [queue[i], queue[j]] = [queue[j], queue[i]];
+      }
+      if (queue.length > 1 && queue.at(-1) === previous) {
+        [queue[0], queue[queue.length - 1]] = [queue.at(-1), queue[0]];
+      }
+    }
+    const track = queue.pop();
+    if (!track) return false;
+    previous = track;
+    audio.src = "assets/mp3/" + track;
+    return true;
+  }
+
+  async function play() {
+    if (!started || muted || document.hidden || playing) return;
+    if (!audio.getAttribute("src") && !nextTrack()) return;
+    playing = true;
+    try { await audio.play(); } catch {}
+    finally {
+      playing = false;
+      if (muted || document.hidden) audio.pause();
+    }
+  }
+
+  function refresh() {
+    button.textContent = muted ? "🔇" : "🔊";
+    const labels = {
+      fr: ["Couper le son", "Activer le son"],
+      en: ["Mute sound", "Enable sound"],
+      ja: ["消音", "音をオンにする"],
+      es: ["Silenciar", "Activar sonido"],
+      pt: ["Silenciar", "Ativar som"]
+    };
+    const label = (labels[document.documentElement.lang] || labels.fr)[muted ? 1 : 0];
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.setAttribute("aria-pressed", String(muted));
+    GameSound.setMuted(muted);
+  }
+
+  button.addEventListener("click", () => {
+    muted = !muted;
+    started = true;
+    try { localStorage.setItem("breathe-muted", String(muted)); } catch {}
+    refresh();
+    if (muted) audio.pause();
+    else { GameSound.unlock(); void play(); }
+  });
+  function start(event) {
+    if (event.target.closest("#sound-toggle")) return;
+    started = true;
+    void play();
+  }
+  document.addEventListener("pointerdown", start);
+  document.addEventListener("keydown", start);
+  audio.addEventListener("ended", () => { if (nextTrack()) void play(); });
+  audio.addEventListener("error", () => {
+    failed.add(previous);
+    queue = queue.filter(track => !failed.has(track));
+    if (nextTrack()) setTimeout(() => void play(), 0);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) audio.pause();
+    else void play();
+  });
+  new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+  refresh();
 })();
 
 
@@ -3828,6 +3953,63 @@ const PopText = (() => {
 })();
 
 
+function createBreathingGuide() {
+  const INHALE_SECONDS = 4;
+  const EXHALE_SECONDS = 6;
+  let phase = "waiting", phaseStart = 0, releaseScale = 0.85;
+  let fullInhale = false, cyclesCompleted = 0;
+  function inhaleScale(now) {
+    const t = Math.min(1, (now - phaseStart) / (INHALE_SECONDS * 1000));
+    return 0.85 + 0.5 * (0.5 - 0.5 * Math.cos(t * Math.PI));
+  }
+
+  function press() {
+    if (phase !== "waiting") return;
+    phase = "inhale";
+    phaseStart = performance.now();
+  }
+
+  function release() {
+    if (phase !== "inhale") return;
+    const now = performance.now();
+    releaseScale = inhaleScale(now);
+    fullInhale = now - phaseStart >= INHALE_SECONDS * 1000;
+    phase = "exhale";
+    phaseStart = now;
+  }
+
+  function updateBreathing() {
+    const now = performance.now();
+    if (phase === "inhale" && now - phaseStart >= INHALE_SECONDS * 1000) {
+      releaseScale = 1.35;
+      fullInhale = true;
+      phase = "exhale";
+      phaseStart += INHALE_SECONDS * 1000;
+    }
+    const elapsed = (now - phaseStart) / 1000;
+    if (phase === "exhale" && elapsed >= EXHALE_SECONDS) {
+      if (fullInhale) cyclesCompleted++;
+      phase = "waiting";
+    }
+    if (phase === "waiting") {
+      return { label: "pressInhale", secondsLeft: INHALE_SECONDS, scale: 0.85, cyclesCompleted };
+    }
+    if (phase === "inhale") {
+      return {
+        label: elapsed >= INHALE_SECONDS ? "releaseExhale" : "keepInhaling",
+        secondsLeft: Math.max(0, Math.ceil(INHALE_SECONDS - elapsed)),
+        scale: inhaleScale(now), cyclesCompleted
+      };
+    }
+    const t = Math.min(1, elapsed / EXHALE_SECONDS);
+    return {
+      label: "relaxExhale", secondsLeft: Math.max(0, Math.ceil(EXHALE_SECONDS - elapsed)),
+      scale: releaseScale + (0.85 - releaseScale) * (0.5 - 0.5 * Math.cos(t * Math.PI)),
+      cyclesCompleted
+    };
+  }
+  return { press, release, updateBreathing };
+}
 /* ============================================
    MOD-CALM-001 : Détection de rythme rapide + overlay de respiration
    Surveille la fréquence des taps/swipes pendant le jeu.
@@ -3844,16 +4026,7 @@ const Calm = (() => {
   let lastDismissTime = -Infinity;
   let active = false;
 
-  // Cycle de respiration : phases en secondes (méthode 4-4-6, douce et accessible)
-  const BREATH_CYCLE = [
-    { label: "Inspire", duration: 4, scaleTo: 1.35 },
-    { label: "Retiens", duration: 4, scaleTo: 1.35 },
-    { label: "Expire", duration: 6, scaleTo: 0.85 },
-  ];
-
-  let phaseIndex = 0;
-  let phaseStart = 0;
-  let cyclesCompleted = 0;
+  let breathingGuide = createBreathingGuide();
   let onActivateCallback = null;
   let onResumeCallback = null;
 
@@ -3871,9 +4044,9 @@ const Calm = (() => {
   function trigger() {
     active = true;
     actionTimestamps = [];
-    phaseIndex = 0;
-    phaseStart = performance.now();
-    cyclesCompleted = 0;
+    breathingGuide = createBreathingGuide();
+
+
     if (onActivateCallback) onActivateCallback();
   }
 
@@ -3890,43 +4063,23 @@ const Calm = (() => {
     onResumeCallback = onResume;
   }
 
-  // Avance la phase de respiration ; retourne l'état courant pour le rendu
-  function updateBreathing(dt) {
-    if (!active) return null;
-    const now = performance.now();
-    const elapsed = (now - phaseStart) / 1000;
-    const phase = BREATH_CYCLE[phaseIndex];
-
-    if (elapsed >= phase.duration) {
-      phaseIndex = (phaseIndex + 1) % BREATH_CYCLE.length;
-      if (phaseIndex === 0) cyclesCompleted++;
-      phaseStart = now;
-      return updateBreathing(0); // recalcule immédiatement sur la nouvelle phase
-    }
-
-    const t = elapsed / phase.duration;
-    // easing doux (sinus) plutôt que linéaire, pour une respiration moins mécanique
-    const eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
-
-    const prevPhase = BREATH_CYCLE[(phaseIndex - 1 + BREATH_CYCLE.length) % BREATH_CYCLE.length];
-    const fromScale = prevPhase.scaleTo;
-    const toScale = phase.scaleTo;
-    const currentScale = fromScale + (toScale - fromScale) * eased;
-
-    return {
-      label: phase.label,
-      secondsLeft: Math.ceil(phase.duration - elapsed),
-      scale: currentScale,
-      cyclesCompleted
-    };
+  function press() {
+    if (active) breathingGuide.press();
   }
 
+  function release() {
+    if (active) breathingGuide.release();
+  }
+
+  function updateBreathing() {
+    return active ? breathingGuide.updateBreathing() : null;
+  }
   function reset() {
     actionTimestamps = [];
     active = false;
   }
 
-  return { registerAction, trigger, dismiss, isActive, setCallbacks, updateBreathing, reset };
+  return { registerAction, trigger, dismiss, isActive, setCallbacks, press, release, updateBreathing, reset };
 })();
 
 
@@ -4066,6 +4219,71 @@ const Meditation = (() => {
 })();
 
 
+const MeditationBubbles = (() => {
+  let field, message, spawnTimer;
+  let lastIndex = -1;
+  const pending = new Set();
+
+  function later(callback, delay) {
+    const timer = setTimeout(() => {
+      pending.delete(timer);
+      callback();
+    }, delay);
+    pending.add(timer);
+  }
+
+  function stop() {
+    clearInterval(spawnTimer);
+    for (const timer of pending) clearTimeout(timer);
+    pending.clear();
+    field?.replaceChildren();
+  }
+
+  function spawn() {
+    const bubble = document.createElement("button");
+    bubble.type = "button";
+    bubble.className = "meditation-bubble";
+    bubble.setAttribute("aria-label", GameLanguage.text("affirmTitle"));
+    bubble.style.left = (6 + Math.random() * 68) + "%";
+    bubble.style.setProperty("--drift", (Math.random() * 24 - 12) + "px");
+    let popped = false;
+
+    function pop() {
+      if (popped) return;
+      popped = true;
+      bubble.disabled = true;
+      bubble.classList.add("popped");
+      const count = MEDITATION_AFFIRMATIONS.length;
+      lastIndex = (lastIndex + 1 + Math.floor(Math.random() * (count - 1))) % count;
+      message.textContent = MEDITATION_AFFIRMATIONS[lastIndex];
+      GameSound.pop();
+      later(() => bubble.remove(), 350);
+    }
+
+    bubble.addEventListener("click", pop);
+    field.appendChild(bubble);
+    later(pop, 3000);
+  }
+
+  function start() {
+    stop();
+    field = document.getElementById("med-affirm-bubbles");
+    message = document.getElementById("med-affirm-text");
+    message.textContent = "";
+    GameSound.unlock();
+    spawn();
+    spawnTimer = setInterval(spawn, 4500);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stop();
+    else if (Meditation.isVisible() && Meditation.getActiveExercise() === "affirmations") start();
+  });
+
+  return { start, stop };
+})();
+
+
 /* ============================================
    MOD-GAME-001 : Boucle principale, score, session
    Orchestré : Scenery + Bubbles + Quotes
@@ -4125,7 +4343,7 @@ const Meditation = (() => {
       "med-choice-breathing .meditation-choice-desc": GameLanguage.text("breathDesc"),
       "med-choice-bodyscan .meditation-choice-title": GameLanguage.text("scanTitle"),
       "med-choice-bodyscan .meditation-choice-desc": GameLanguage.text("scanDesc"),
-      "med-breath-message": GameLanguage.text("breathMessage"),
+      "med-breath-message": GameLanguage.text("breathMessage") + "\n" + GameLanguage.text("breathComfort"),
       "med-breath-phase-label": GameLanguage.text("Inspire"),
       "med-scan-progress": GameLanguage.text("step") + " 1 / 15",
       "med-scan-zone": GameLanguage.item("zones", 0, "Le crâne et le cuir chevelu"),
@@ -4145,7 +4363,7 @@ const Meditation = (() => {
       const parts = value.split("\n");
       const element = document.querySelector("#" + selector);
       if (parts.length === 1) element.textContent = value;
-      else element.replaceChildren(parts[0], document.createElement("br"), parts[1]);
+      else element.replaceChildren(...parts.flatMap((part, i) => i ? [document.createElement("br"), part] : [part]));
     }
     for (const [id, key] of [
       ["garden-back-btn", "back"], ["meditation-back-btn", "back"],
@@ -4483,23 +4701,42 @@ const Meditation = (() => {
   const calmCyclesLabel = document.getElementById("calm-cycles-label");
 
   let calmAnimFrame = null;
-  const MIN_CYCLES_BEFORE_RESUME = 2; // au moins 2 cycles complets avant de pouvoir reprendre
+  let calmPointer = null;
+  calmOverlay.addEventListener("pointerdown", event => {
+    if (event.target.closest("button") || calmPointer !== null || event.button !== 0) return;
+    calmPointer = event.pointerId;
+    calmOverlay.setPointerCapture(event.pointerId);
+    Calm.press();
+  });
+  function releaseBreathing(event) {
+    if (event.pointerId !== calmPointer) return;
+    calmPointer = null;
+    Calm.release();
+  }
+  calmOverlay.addEventListener("pointerup", releaseBreathing);
+  calmOverlay.addEventListener("pointercancel", releaseBreathing);
+  calmOverlay.addEventListener("lostpointercapture", releaseBreathing);
+  calmOverlay.tabIndex = 0;
+  calmOverlay.addEventListener("keydown", event => {
+    if (event.target.closest("button") || ![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    Calm.press();
+  });
+  calmOverlay.addEventListener("keyup", event => {
+    if (![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    Calm.release();
+  });
 
   function calmLoop() {
     const state = Calm.updateBreathing(16);
     if (!state) return; // l'overlay a été fermé entre-temps
 
     calmPhaseLabel.textContent = GameLanguage.text(state.label);
-    calmPhaseSeconds.textContent = state.secondsLeft;
+    calmPhaseSeconds.textContent = state.secondsLeft || "";
     calmCircle.style.transform = "scale(" + state.scale + ")";
 
-    if (state.cyclesCompleted >= MIN_CYCLES_BEFORE_RESUME) {
-      calmResumeBtn.classList.add("ready");
-      calmCyclesLabel.textContent = GameLanguage.text("ready");
-    } else {
-      const remaining = MIN_CYCLES_BEFORE_RESUME - state.cyclesCompleted;
-      calmCyclesLabel.textContent = GameLanguage.text("cycles") + " · " + remaining;
-    }
+    calmCyclesLabel.textContent = GameLanguage.text("breathComfort");
 
     calmAnimFrame = requestAnimationFrame(calmLoop);
   }
@@ -4508,12 +4745,14 @@ const Meditation = (() => {
     () => {
       // activation : affiche l'overlay et démarre la boucle d'animation
       calmOverlay.classList.add("visible");
-      calmResumeBtn.classList.remove("ready");
+      calmOverlay.focus();
+      calmResumeBtn.classList.add("ready");
       calmLoop();
     },
     () => {
       // reprise : masque l'overlay et arrête la boucle
       calmOverlay.classList.remove("visible");
+      calmPointer = null;
       if (calmAnimFrame) { cancelAnimationFrame(calmAnimFrame); calmAnimFrame = null; }
     }
   );
@@ -4530,24 +4769,10 @@ const Meditation = (() => {
   const meditationMenu = document.getElementById("meditation-menu");
   const meditationExerciseView = document.getElementById("meditation-exercise-view");
   const medAffirmContainer = document.getElementById("med-affirm-container");
-  const medAffirmText = document.getElementById("med-affirm-text");
-  const medAffirmCount = document.getElementById("med-affirm-count");
-  let affirmIndex = 0;
-
-  function renderAffirmation(delta = 0) {
-    const count = MEDITATION_AFFIRMATIONS.length;
-    affirmIndex = (affirmIndex + delta + count) % count;
-    medAffirmText.textContent = MEDITATION_AFFIRMATIONS[affirmIndex];
-    medAffirmCount.textContent = (affirmIndex + 1) + " / " + count;
-  }
-
   document.getElementById("med-choice-affirm").addEventListener("click", () => {
     Meditation.startAffirmations();
     showMeditationExercise("affirmations");
-    document.getElementById("med-affirm-next").focus();
   });
-  document.getElementById("med-affirm-prev").addEventListener("click", () => renderAffirmation(-1));
-  document.getElementById("med-affirm-next").addEventListener("click", () => renderAffirmation(1));
   const medChoiceBreathing = document.getElementById("med-choice-breathing");
   const medChoiceBodyscan = document.getElementById("med-choice-bodyscan");
   const medBreathContainer = document.getElementById("med-breath-container");
@@ -4565,36 +4790,41 @@ const Meditation = (() => {
   const medScanRestart = document.getElementById("med-scan-restart");
 
   let medAnimFrame = null;
-  // Réutilise le même cycle de respiration que Calm, via une instance de calcul indépendante
-  // (on duplique une petite logique locale pour ne pas coupler Meditation à l'état de Calm)
-  const MED_BREATH_CYCLE = [
-    { label: "Inspire", duration: 4, scaleTo: 1.35 },
-    { label: "Retiens", duration: 4, scaleTo: 1.35 },
-    { label: "Expire", duration: 6, scaleTo: 0.85 },
-  ];
-  let medBreathPhaseIndex = 0;
-  let medBreathPhaseStart = 0;
+  let medBreathingGuide = createBreathingGuide();
+  let medPointer = null;
+  medBreathContainer.tabIndex = 0;
+  medBreathContainer.addEventListener("pointerdown", event => {
+    if (medPointer !== null || event.button !== 0) return;
+    medPointer = event.pointerId;
+    medBreathContainer.setPointerCapture(event.pointerId);
+    medBreathingGuide.press();
+  });
+
+  function releaseMedBreathing(event) {
+    if (event.pointerId !== medPointer) return;
+    medPointer = null;
+    medBreathingGuide.release();
+  }
+  medBreathContainer.addEventListener("pointerup", releaseMedBreathing);
+  medBreathContainer.addEventListener("pointercancel", releaseMedBreathing);
+  medBreathContainer.addEventListener("lostpointercapture", releaseMedBreathing);
+  medBreathContainer.addEventListener("keydown", event => {
+    if (![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    medBreathingGuide.press();
+  });
+  medBreathContainer.addEventListener("keyup", event => {
+    if (![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    medBreathingGuide.release();
+  });
 
   function updateMedBreathing() {
-    const now = performance.now();
-    const elapsed = (now - medBreathPhaseStart) / 1000;
-    const phase = MED_BREATH_CYCLE[medBreathPhaseIndex];
-    if (elapsed >= phase.duration) {
-      medBreathPhaseIndex = (medBreathPhaseIndex + 1) % MED_BREATH_CYCLE.length;
-      medBreathPhaseStart = now;
-    }
-    const updatedPhase = MED_BREATH_CYCLE[medBreathPhaseIndex];
-    const updatedElapsed = (performance.now() - medBreathPhaseStart) / 1000;
-    const t = Math.min(1, updatedElapsed / updatedPhase.duration);
-    const eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
-    const prevPhase = MED_BREATH_CYCLE[(medBreathPhaseIndex - 1 + MED_BREATH_CYCLE.length) % MED_BREATH_CYCLE.length];
-    const scale = prevPhase.scaleTo + (updatedPhase.scaleTo - prevPhase.scaleTo) * eased;
-
-    medBreathPhaseLabel.textContent = GameLanguage.text(updatedPhase.label);
-    medBreathPhaseSeconds.textContent = Math.ceil(updatedPhase.duration - updatedElapsed);
-    medBreathCircle.style.transform = "scale(" + scale + ")";
+    const state = medBreathingGuide.updateBreathing();
+    medBreathPhaseLabel.textContent = GameLanguage.text(state.label);
+    medBreathPhaseSeconds.textContent = state.secondsLeft || "";
+    medBreathCircle.style.transform = "scale(" + state.scale + ")";
   }
-
   function medLoop() {
     if (!Meditation.isVisible()) return;
     const exercise = Meditation.getActiveExercise();
@@ -4629,19 +4859,24 @@ const Meditation = (() => {
     medScanContainer.style.display = exercise === "bodyscan" ? "flex" : "none";
 
     if (exercise === "breathing") {
-      medBreathPhaseIndex = 0;
-      medBreathPhaseStart = performance.now();
+      medBreathingGuide = createBreathingGuide();
+      medPointer = null;
+      medBreathContainer.focus();
     } else if (exercise === "bodyscan") {
       medScanFinished.classList.remove("visible");
       medScanContainer.querySelectorAll(":scope > *:not(#med-scan-finished)").forEach(el => el.style.display = "");
     }
 
     if (medAnimFrame) { cancelAnimationFrame(medAnimFrame); medAnimFrame = null; }
-    if (exercise === "affirmations") renderAffirmation();
+    MeditationBubbles.stop();
+    if (exercise === "affirmations") MeditationBubbles.start();
     else medLoop();
   }
 
   function showMeditationMenu() {
+    medPointer = null;
+    medBreathingGuide = createBreathingGuide();
+    MeditationBubbles.stop();
     meditationMenu.style.display = "flex";
     meditationExerciseView.classList.remove("visible");
     if (medAnimFrame) { cancelAnimationFrame(medAnimFrame); medAnimFrame = null; }

@@ -24,6 +24,12 @@ fs.mkdirSync("docs", { recursive: true });
 fs.writeFileSync(path.join("docs", "index.html"), out);
 fs.copyFileSync("manifest.webmanifest", path.join("docs", "manifest.webmanifest"));
 fs.mkdirSync(path.join("docs", "assets"), { recursive: true });
+fs.mkdirSync(path.join("docs", "assets", "mp3"), { recursive: true });
+for (const track of fs.readdirSync(path.join("assets", "mp3"))) {
+  if (track.endsWith(".mp3")) {
+    fs.copyFileSync(path.join("assets", "mp3", track), path.join("docs", "assets", "mp3", track));
+  }
+}
 for (const size of [32, 180, 192, 512]) {
   const icon = path.join("assets", `icon-${size}.png`);
   fs.copyFileSync(icon, path.join("docs", icon));

@@ -57,7 +57,7 @@
       "med-choice-breathing .meditation-choice-desc": GameLanguage.text("breathDesc"),
       "med-choice-bodyscan .meditation-choice-title": GameLanguage.text("scanTitle"),
       "med-choice-bodyscan .meditation-choice-desc": GameLanguage.text("scanDesc"),
-      "med-breath-message": GameLanguage.text("breathMessage"),
+      "med-breath-message": GameLanguage.text("breathMessage") + "\n" + GameLanguage.text("breathComfort"),
       "med-breath-phase-label": GameLanguage.text("Inspire"),
       "med-scan-progress": GameLanguage.text("step") + " 1 / 15",
       "med-scan-zone": GameLanguage.item("zones", 0, "Le crâne et le cuir chevelu"),
@@ -77,7 +77,7 @@
       const parts = value.split("\n");
       const element = document.querySelector("#" + selector);
       if (parts.length === 1) element.textContent = value;
-      else element.replaceChildren(parts[0], document.createElement("br"), parts[1]);
+      else element.replaceChildren(...parts.flatMap((part, i) => i ? [document.createElement("br"), part] : [part]));
     }
     for (const [id, key] of [
       ["garden-back-btn", "back"], ["meditation-back-btn", "back"],
@@ -415,23 +415,42 @@
   const calmCyclesLabel = document.getElementById("calm-cycles-label");
 
   let calmAnimFrame = null;
-  const MIN_CYCLES_BEFORE_RESUME = 2; // au moins 2 cycles complets avant de pouvoir reprendre
+  let calmPointer = null;
+  calmOverlay.addEventListener("pointerdown", event => {
+    if (event.target.closest("button") || calmPointer !== null || event.button !== 0) return;
+    calmPointer = event.pointerId;
+    calmOverlay.setPointerCapture(event.pointerId);
+    Calm.press();
+  });
+  function releaseBreathing(event) {
+    if (event.pointerId !== calmPointer) return;
+    calmPointer = null;
+    Calm.release();
+  }
+  calmOverlay.addEventListener("pointerup", releaseBreathing);
+  calmOverlay.addEventListener("pointercancel", releaseBreathing);
+  calmOverlay.addEventListener("lostpointercapture", releaseBreathing);
+  calmOverlay.tabIndex = 0;
+  calmOverlay.addEventListener("keydown", event => {
+    if (event.target.closest("button") || ![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    Calm.press();
+  });
+  calmOverlay.addEventListener("keyup", event => {
+    if (![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    Calm.release();
+  });
 
   function calmLoop() {
     const state = Calm.updateBreathing(16);
     if (!state) return; // l'overlay a été fermé entre-temps
 
     calmPhaseLabel.textContent = GameLanguage.text(state.label);
-    calmPhaseSeconds.textContent = state.secondsLeft;
+    calmPhaseSeconds.textContent = state.secondsLeft || "";
     calmCircle.style.transform = "scale(" + state.scale + ")";
 
-    if (state.cyclesCompleted >= MIN_CYCLES_BEFORE_RESUME) {
-      calmResumeBtn.classList.add("ready");
-      calmCyclesLabel.textContent = GameLanguage.text("ready");
-    } else {
-      const remaining = MIN_CYCLES_BEFORE_RESUME - state.cyclesCompleted;
-      calmCyclesLabel.textContent = GameLanguage.text("cycles") + " · " + remaining;
-    }
+    calmCyclesLabel.textContent = GameLanguage.text("breathComfort");
 
     calmAnimFrame = requestAnimationFrame(calmLoop);
   }
@@ -440,12 +459,14 @@
     () => {
       // activation : affiche l'overlay et démarre la boucle d'animation
       calmOverlay.classList.add("visible");
-      calmResumeBtn.classList.remove("ready");
+      calmOverlay.focus();
+      calmResumeBtn.classList.add("ready");
       calmLoop();
     },
     () => {
       // reprise : masque l'overlay et arrête la boucle
       calmOverlay.classList.remove("visible");
+      calmPointer = null;
       if (calmAnimFrame) { cancelAnimationFrame(calmAnimFrame); calmAnimFrame = null; }
     }
   );
@@ -462,24 +483,10 @@
   const meditationMenu = document.getElementById("meditation-menu");
   const meditationExerciseView = document.getElementById("meditation-exercise-view");
   const medAffirmContainer = document.getElementById("med-affirm-container");
-  const medAffirmText = document.getElementById("med-affirm-text");
-  const medAffirmCount = document.getElementById("med-affirm-count");
-  let affirmIndex = 0;
-
-  function renderAffirmation(delta = 0) {
-    const count = MEDITATION_AFFIRMATIONS.length;
-    affirmIndex = (affirmIndex + delta + count) % count;
-    medAffirmText.textContent = MEDITATION_AFFIRMATIONS[affirmIndex];
-    medAffirmCount.textContent = (affirmIndex + 1) + " / " + count;
-  }
-
   document.getElementById("med-choice-affirm").addEventListener("click", () => {
     Meditation.startAffirmations();
     showMeditationExercise("affirmations");
-    document.getElementById("med-affirm-next").focus();
   });
-  document.getElementById("med-affirm-prev").addEventListener("click", () => renderAffirmation(-1));
-  document.getElementById("med-affirm-next").addEventListener("click", () => renderAffirmation(1));
   const medChoiceBreathing = document.getElementById("med-choice-breathing");
   const medChoiceBodyscan = document.getElementById("med-choice-bodyscan");
   const medBreathContainer = document.getElementById("med-breath-container");
@@ -497,36 +504,41 @@
   const medScanRestart = document.getElementById("med-scan-restart");
 
   let medAnimFrame = null;
-  // Réutilise le même cycle de respiration que Calm, via une instance de calcul indépendante
-  // (on duplique une petite logique locale pour ne pas coupler Meditation à l'état de Calm)
-  const MED_BREATH_CYCLE = [
-    { label: "Inspire", duration: 4, scaleTo: 1.35 },
-    { label: "Retiens", duration: 4, scaleTo: 1.35 },
-    { label: "Expire", duration: 6, scaleTo: 0.85 },
-  ];
-  let medBreathPhaseIndex = 0;
-  let medBreathPhaseStart = 0;
+  let medBreathingGuide = createBreathingGuide();
+  let medPointer = null;
+  medBreathContainer.tabIndex = 0;
+  medBreathContainer.addEventListener("pointerdown", event => {
+    if (medPointer !== null || event.button !== 0) return;
+    medPointer = event.pointerId;
+    medBreathContainer.setPointerCapture(event.pointerId);
+    medBreathingGuide.press();
+  });
+
+  function releaseMedBreathing(event) {
+    if (event.pointerId !== medPointer) return;
+    medPointer = null;
+    medBreathingGuide.release();
+  }
+  medBreathContainer.addEventListener("pointerup", releaseMedBreathing);
+  medBreathContainer.addEventListener("pointercancel", releaseMedBreathing);
+  medBreathContainer.addEventListener("lostpointercapture", releaseMedBreathing);
+  medBreathContainer.addEventListener("keydown", event => {
+    if (![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    medBreathingGuide.press();
+  });
+  medBreathContainer.addEventListener("keyup", event => {
+    if (![" ", "Enter"].includes(event.key)) return;
+    event.preventDefault();
+    medBreathingGuide.release();
+  });
 
   function updateMedBreathing() {
-    const now = performance.now();
-    const elapsed = (now - medBreathPhaseStart) / 1000;
-    const phase = MED_BREATH_CYCLE[medBreathPhaseIndex];
-    if (elapsed >= phase.duration) {
-      medBreathPhaseIndex = (medBreathPhaseIndex + 1) % MED_BREATH_CYCLE.length;
-      medBreathPhaseStart = now;
-    }
-    const updatedPhase = MED_BREATH_CYCLE[medBreathPhaseIndex];
-    const updatedElapsed = (performance.now() - medBreathPhaseStart) / 1000;
-    const t = Math.min(1, updatedElapsed / updatedPhase.duration);
-    const eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
-    const prevPhase = MED_BREATH_CYCLE[(medBreathPhaseIndex - 1 + MED_BREATH_CYCLE.length) % MED_BREATH_CYCLE.length];
-    const scale = prevPhase.scaleTo + (updatedPhase.scaleTo - prevPhase.scaleTo) * eased;
-
-    medBreathPhaseLabel.textContent = GameLanguage.text(updatedPhase.label);
-    medBreathPhaseSeconds.textContent = Math.ceil(updatedPhase.duration - updatedElapsed);
-    medBreathCircle.style.transform = "scale(" + scale + ")";
+    const state = medBreathingGuide.updateBreathing();
+    medBreathPhaseLabel.textContent = GameLanguage.text(state.label);
+    medBreathPhaseSeconds.textContent = state.secondsLeft || "";
+    medBreathCircle.style.transform = "scale(" + state.scale + ")";
   }
-
   function medLoop() {
     if (!Meditation.isVisible()) return;
     const exercise = Meditation.getActiveExercise();
@@ -561,19 +573,24 @@
     medScanContainer.style.display = exercise === "bodyscan" ? "flex" : "none";
 
     if (exercise === "breathing") {
-      medBreathPhaseIndex = 0;
-      medBreathPhaseStart = performance.now();
+      medBreathingGuide = createBreathingGuide();
+      medPointer = null;
+      medBreathContainer.focus();
     } else if (exercise === "bodyscan") {
       medScanFinished.classList.remove("visible");
       medScanContainer.querySelectorAll(":scope > *:not(#med-scan-finished)").forEach(el => el.style.display = "");
     }
 
     if (medAnimFrame) { cancelAnimationFrame(medAnimFrame); medAnimFrame = null; }
-    if (exercise === "affirmations") renderAffirmation();
+    MeditationBubbles.stop();
+    if (exercise === "affirmations") MeditationBubbles.start();
     else medLoop();
   }
 
   function showMeditationMenu() {
+    medPointer = null;
+    medBreathingGuide = createBreathingGuide();
+    MeditationBubbles.stop();
     meditationMenu.style.display = "flex";
     meditationExerciseView.classList.remove("visible");
     if (medAnimFrame) { cancelAnimationFrame(medAnimFrame); medAnimFrame = null; }
