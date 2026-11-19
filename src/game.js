@@ -568,6 +568,7 @@
   function showMeditationExercise(exercise) {
     meditationMenu.style.display = "none";
     meditationExerciseView.classList.add("visible");
+    meditationExerciseView.classList.toggle("affirmations", exercise === "affirmations");
     medAffirmContainer.hidden = exercise !== "affirmations";
     medBreathContainer.style.display = exercise === "breathing" ? "flex" : "none";
     medScanContainer.style.display = exercise === "bodyscan" ? "flex" : "none";

@@ -124,21 +124,30 @@
   }
   #meditation-exercise-view.visible { display:flex; }
   #meditation-menu, #meditation-exercise-view { min-height:0; overflow-y:auto; }
-  #med-affirm-container:not([hidden]) { position:relative; flex:1; width:100%; min-height:260px; text-align:center; color:#334d40; }
+  #med-affirm-container:not([hidden]) { position:relative; flex:1; width:100%; min-height:260px; text-align:center; color:#4b3027; }
+  #meditation-exercise-view.affirmations { padding:0; overflow:hidden; }
+  #med-affirm-landscape { position:absolute; inset:0; width:100%; height:100%; }
   #med-affirm-bubbles { position:absolute; inset:0; overflow:hidden; }
-  #med-affirm-text { position:absolute; bottom:5%; left:0; width:100%; pointer-events:none; }
+  #med-affirm-text {
+    position:absolute; top:50%; left:50%; width:88%; transform:translate(-50%,-50%);
+    padding:16px; pointer-events:none; opacity:0; transition:opacity 1.5s ease;
+    background:radial-gradient(ellipse,#fff5ddeb, #fff5ddaa 65%,#fff5dd00);
+    text-shadow:0 1px 2px #fff5dd;
+  }
+  #med-affirm-text.revealed { opacity:1; }
   .meditation-bubble {
-    position:absolute; top:2%; width:76px; height:76px; border:0;
+    position:absolute; top:2%; left:calc(50% - 38px); width:76px; height:76px; border:0;
     cursor:pointer; background:radial-gradient(ellipse at 28% 25%,#fffd 0 9%,transparent 15%),linear-gradient(135deg,#dfede4,#b8d4cf 60%,#8bb5a5);
     clip-path:polygon(28% 4%,73% 0,98% 30%,94% 75%,64% 100%,21% 91%,0 56%,5% 25%);
     animation:meditation-fall 3s linear forwards;
   }
-  @keyframes meditation-fall { to { top:40%; transform:translateX(var(--drift)); } }
-  .meditation-bubble.popped { opacity:0; transition:opacity .3s; }
+  @keyframes meditation-fall { to { top:calc(50% - 38px); } }
+  .meditation-bubble.popped { animation-play-state:paused; opacity:0; scale:1.7; transition:opacity 1.5s,scale 1.5s; }
   .meditation-bubble:focus-visible { outline:0; background:#f3d27a; }
   @media (prefers-reduced-motion:reduce) {
-    .meditation-bubble { animation:none; top:25%; }
+    .meditation-bubble { animation:none; top:calc(50% - 38px); }
     .meditation-bubble.popped { transition:none; }
+    #med-affirm-text { transition:none; }
   }
   #med-affirm-text { margin:0; font:600 clamp(20px,5vw,32px)/1.4 Georgia,serif; }
   #med-affirm-controls { display:flex; align-items:center; gap:14px; }
@@ -499,6 +508,7 @@
 
     <div id="meditation-exercise-view">
       <section id="med-affirm-container" lang="fr" hidden>
+        <canvas id="med-affirm-landscape" aria-hidden="true"></canvas>
         <div id="med-affirm-bubbles"></div>
         <p id="med-affirm-text" aria-live="polite"></p>
       </section>
