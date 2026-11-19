@@ -127,6 +127,7 @@
   let viewW = 0, viewH = 0;
 
   function onPop(bubble, isChainHit) {
+    GameSound.pop();
     if (bubble.isStar) showEncouragement();
     const now = performance.now();
     if (now - comboTimer < 900) {
@@ -262,10 +263,12 @@
       }
     }
 
+    GameSound.wind(running && !Calm.isActive() && !document.hidden ? Bubbles.getProjectileSpeed() : 0);
     requestAnimationFrame(gameLoop);
   }
 
   function startSession() {
+    GameSound.unlock();
     clearTimeout(encouragementTimer);
     encouragement.hidden = true;
     score = 0;
@@ -330,6 +333,7 @@
   }
 
   canvas.addEventListener("pointerdown", event => {
+    GameSound.unlock();
     if (!running || Calm.isActive() || !event.isPrimary || event.button !== 0) return;
     const start = getPos(event);
     gesture = {

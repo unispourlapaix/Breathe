@@ -170,12 +170,18 @@ const Bubbles = (() => {
     if (bubble && !bubble.popped && list.includes(bubble)) popBubble(bubble);
   }
 
-  // Swipe = lance la bulle bonus comme un projectile (billard zen)
-  // ou la relance (une seule fois) si elle est déjà en mouvement
+  // Le glissement éclate les bulles normales et lance les bulles bonus.
   function handleSwipe(x1, y1, x2, y2) {
     let actedOnOne = false;
     for (const b of list) {
-      if (b.popped || !b.isBonus) continue;
+      if (b.popped) continue;
+      if (!b.isBonus) {
+        if (segmentCircleIntersect(x1, y1, x2, y2, b.x, b.y, b.radius * 1.15 + 3)) {
+          popBubble(b);
+          actedOnOne = true;
+        }
+        continue;
+      }
 
       const canAct = !b.launched || b.canRelaunch;
       if (!canAct) continue;
@@ -291,5 +297,10 @@ const Bubbles = (() => {
     spawnTimer = 0;
   }
 
-  return { init, update, draw, findTapTarget, popTapTarget, handleSwipe, resize, reset };
+  function getProjectileSpeed() {
+    return list.reduce((speed, bubble) => bubble.launched && !bubble.popped
+      ? Math.max(speed, Math.hypot(bubble.launchVx, bubble.launchVy)) : speed, 0);
+  }
+
+  return { init, update, draw, findTapTarget, popTapTarget, handleSwipe, resize, reset, getProjectileSpeed };
 })();
