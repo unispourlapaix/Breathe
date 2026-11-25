@@ -129,29 +129,27 @@
   #med-affirm-landscape { position:absolute; inset:0; width:100%; height:100%; }
   #med-affirm-bubbles { position:absolute; inset:0; overflow:hidden; }
   #med-affirm-text {
-    position:absolute; top:50%; left:50%; width:88%; transform:translate(-50%,-50%);
+    position:absolute; top:55%; left:50%; width:76%; max-width:300px; transform:translate(-50%,-50%);
     padding:16px; pointer-events:none; opacity:0; transition:opacity 1.5s ease;
     background:radial-gradient(ellipse,#fff5ddeb, #fff5ddaa 65%,#fff5dd00);
     text-shadow:0 1px 2px #fff5dd;
   }
   #med-affirm-text.revealed { opacity:1; }
   .meditation-bubble {
-    position:absolute; top:2%; left:calc(50% - 38px); width:76px; height:76px; border:0;
+    position:absolute; width:76px; height:76px; border:0; touch-action:none;
     cursor:pointer; background:radial-gradient(ellipse at 28% 25%,#fffd 0 9%,transparent 15%),linear-gradient(135deg,#dfede4,#b8d4cf 60%,#8bb5a5);
     clip-path:polygon(28% 4%,73% 0,98% 30%,94% 75%,64% 100%,21% 91%,0 56%,5% 25%);
-    animation:meditation-fall 3s linear forwards;
   }
-  @keyframes meditation-fall { to { top:calc(50% - 38px); } }
-  .meditation-bubble.popped { animation-play-state:paused; opacity:0; scale:1.7; transition:opacity 1.5s,scale 1.5s; }
+  #med-affirm-hint {
+    position:absolute; bottom:12px; left:8%; width:84%; margin:0;
+    pointer-events:none; font:14px/1.4 sans-serif; color:#304b36;
+    background:#fff7e7db; padding:8px 12px; border-radius:14px;
+  }
   .meditation-bubble:focus-visible { outline:0; background:#f3d27a; }
   @media (prefers-reduced-motion:reduce) {
-    .meditation-bubble { animation:none; top:calc(50% - 38px); }
-    .meditation-bubble.popped { transition:none; }
     #med-affirm-text { transition:none; }
   }
-  #med-affirm-text { margin:0; font:600 clamp(20px,5vw,32px)/1.4 Georgia,serif; }
-  #med-affirm-controls { display:flex; align-items:center; gap:14px; }
-  #med-affirm-controls button { min-width:44px; min-height:44px; border:1px solid #8ca79a; border-radius:50%; color:#334d40; background:#f8fcf6; cursor:pointer; }
+  #med-affirm-text { margin:0; font:600 clamp(17px,4.5vw,23px)/1.4 Georgia,serif; }
 
   #med-breath-message { color:#5a6a5a; font-size:14px; text-align:center; margin-bottom:30px; line-height:1.6; }
 
@@ -511,6 +509,7 @@
         <canvas id="med-affirm-landscape" aria-hidden="true"></canvas>
         <div id="med-affirm-bubbles"></div>
         <p id="med-affirm-text" aria-live="polite"></p>
+        <p id="med-affirm-hint" aria-live="polite"></p>
       </section>
       <div id="med-breath-container" style="display:none; flex-direction:column; align-items:center;">
         <div id="med-breath-message">Respire à ton rythme.<br>Aucune limite de temps, arrête-toi quand tu veux.</div>

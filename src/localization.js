@@ -80,6 +80,9 @@ const LOCALIZED_TEXT = {
     ["Sincere advice comforts like a familiar scent.","心からの助言は、懐かしい香りのように心を和ませる。","Un consejo sincero reconforta como un aroma familiar.","Um conselho sincero conforta como um aroma familiar."],
   ],
   ui: {
+    "gardenBreatheIn": ["Appuie pour gonfler la bulle. Inspire doucement, sans forcer.", "Press to fill the bubble. Breathe in gently, without forcing.", "押して泡を膨らませましょう。無理せず、ゆっくり吸って。", "Pulsa para inflar la burbuja. Inhala suavemente, sin forzar.", "Pressione para encher a bolha. Inspire suavemente, sem forçar."],
+    "gardenRelease": ["Glisse doucement puis relâche en expirant. Tu peux relâcher quand tu veux.", "Drag gently, then release as you breathe out. Release whenever you need.", "そっと引いて、吐きながら離しましょう。いつ離しても大丈夫。", "Arrastra suavemente y suelta al exhalar. Puedes soltar cuando quieras.", "Arraste suavemente e solte ao expirar. Solte quando quiser."],
+    "gardenBloom": ["Laisse ta bulle rejoindre les feuilles et regarde le jardin fleurir.", "Let your bubble reach the leaves and watch the garden bloom.", "泡が葉に届き、庭が花開くのを眺めましょう。", "Deja que la burbuja llegue a las hojas y observa florecer el jardín.", "Deixe a bolha chegar às folhas e veja o jardim florescer."],
     "breathComfort": ["Repères de 4 s / 6 s, sans forcer. Relâche plus tôt si besoin. En cas de gêne ou de vertige, arrête et respire normalement.", "4 s / 6 s are guides. Don’t force it. Release earlier if needed. Stop and breathe normally if uncomfortable or dizzy.", "4秒／6秒は目安です。無理せず、必要なら早めに指を離してください。不快感やめまいがあれば中止し、自然に呼吸しましょう。", "4 s / 6 s son orientativos. No fuerces. Suelta antes si lo necesitas. Si hay molestias o mareo, para y respira normalmente.", "4 s / 6 s são referências. Não force. Solte antes se precisar. Se sentir desconforto ou tontura, pare e respire normalmente."],
     "pressInhale": ["Appuie et inspire · 4 s", "Press and breathe in · 4 s", "押しながら吸う · 4秒", "Pulsa e inhala · 4 s", "Pressione e inspire · 4 s"],
     "keepInhaling": ["Maintiens et inspire doucement", "Hold down and breathe in gently", "押したままゆっくり吸って", "Mantén pulsado e inhala suavemente", "Mantenha pressionado e inspire suavemente"],
@@ -89,7 +92,7 @@ const LOCALIZED_TEXT = {
     "replay": ["Rejouer","Play again","もう一度遊ぶ","Volver a jugar","Jogar de novo"],
     "back": ["Retour","Back","戻る","Volver","Voltar"],
     "affirmTitle": ["Encouragements","Affirmations","励ましの言葉","Afirmaciones","Afirmações"],
-    "affirmDesc": ["Des bulles descendent doucement et révèlent l’une des 192 pensées. Touche-les ou laisse-les éclater, sans limite de temps.","Gently falling bubbles reveal one of 192 affirmations. Tap them or let them pop, with no time limit.","ゆっくり降りる泡が192の言葉を届けます。タップしても、そのまま弾けるのを待っても。時間制限はありません。","Las burbujas bajan suavemente y revelan una de 192 afirmaciones. Tócalas o deja que estallen, sin límite de tiempo.","As bolhas descem suavemente e revelam uma de 192 afirmações. Toque nelas ou deixe que estourem, sem limite de tempo."],
+    "affirmDesc": ["Gonfle une bulle, tire doucement et relâche pour faire fleurir un mur de feuilles et découvrir une pensée.", "Fill a bubble, drag gently and release to grow flowers on a leafy wall and discover an affirmation.", "泡を膨らませ、そっと引いて離すと、葉の壁に花が咲き、励ましの言葉が現れます。", "Infla una burbuja, arrastra suavemente y suelta para hacer florecer un muro de hojas y descubrir una afirmación.", "Encha uma bolha, arraste suavemente e solte para fazer florescer um muro de folhas e descobrir uma afirmação."],
     "pop0": ["POP!", "POP!", "ポン！", "¡POP!", "POP!"],
     "pop1": ["PAF!", "POOF!", "パフ！", "¡PUF!", "PUF!"],
     "pop2": ["PLIC!", "PLIP!", "プチッ！", "¡PLIP!", "PLIM!"],
