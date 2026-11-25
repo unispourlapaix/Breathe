@@ -2,12 +2,13 @@ const MeditationBubbles = (() => {
   let canvas, ctx, field, hint, button, observer, frame, backdrop;
   let width = 0, height = 0, active = false, lastTime = 0;
   let phase = "appearing", age = 0, pointer = null, origin;
-  let pull = { x: 0, y: 0 }, bubble = {}, droplets = [], ripples = [];
+  let pull = { x: 0, y: 0 }, bubble = {}, droplets = [], weather = [];
+  let scene = 0, lastThought = -1, sceneImpactCount = 0;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   function radius() { return Math.min(64, width * 0.16, height * 0.12); }
-  function wall() { return height * 0.29; }
+
   function floor() { return height * 0.9; }
   function home() { return { x: width * 0.5, y: height * 0.62 }; }
 
@@ -21,6 +22,7 @@ const MeditationBubbles = (() => {
     age = 0;
     pull = { x: 0, y: 0 };
     bubble = { ...home(), vx: 0, vy: 0, impactX: 0, impactY: 1 };
+    document.getElementById("med-affirm-text").classList.remove("revealed");
     label("elasticReady");
   }
 
@@ -32,14 +34,15 @@ const MeditationBubbles = (() => {
     c.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
     c.fillStyle = "#d9dec4";
     c.fillRect(0, 0, width, height);
-    const image = document.getElementById("garden-landscapes-1");
+    const image = document.getElementById("garden-landscapes-" + (1 + Math.floor(scene / 4)));
     if (image.naturalWidth) {
       const w = image.naturalWidth / 2 - 8, h = image.naturalHeight / 2 - 8;
       const scale = Math.max(width / w, height / h);
-      c.drawImage(image, 4 + (w - width / scale) / 2, 4 + (h - height / scale) / 2,
+      c.drawImage(image, (scene % 2) * image.naturalWidth / 2 + 4 + (w - width / scale) / 2,
+        Math.floor((scene % 4) / 2) * image.naturalHeight / 2 + 4 + (h - height / scale) / 2,
         width / scale, height / scale, 0, 0, width, height);
     }
-    // Une brume légère unifie les feuilles ajoutées et le paysage peint.
+    // Un voile discret garde la bulle lisible sur chaque paysage.
     const mist = c.createLinearGradient(0, 0, 0, height);
     mist.addColorStop(0, "#c5d7ae50");
     mist.addColorStop(0.55, "#fff7e333");
@@ -73,8 +76,8 @@ const MeditationBubbles = (() => {
     age = 0;
     bubble.impactX = nx;
     bubble.impactY = ny;
-    const speed = Math.hypot(bubble.vx, bubble.vy);
-    ripples.push({ x: bubble.x / width, y: bubble.y / height, age: 0, strength: clamp(speed / 250, 0.5, 1.2) });
+
+    revealThought();
     for (let i = 0; i < 26; i++) {
       const angle = Math.random() * Math.PI * 2;
       const velocity = 15 + Math.random() * 55;
@@ -93,8 +96,8 @@ const MeditationBubbles = (() => {
       bubble.x += bubble.vx * dt;
       bubble.y += bubble.vy * dt;
       const r = radius();
-      if (bubble.y - r <= wall()) {
-        bubble.y = wall() + r;
+      if (bubble.y - r <= 0) {
+        bubble.y = r;
         impact(0, 1);
       } else if (bubble.y + r >= floor()) {
         bubble.y = floor() - r;
@@ -107,7 +110,11 @@ const MeditationBubbles = (() => {
         impact(-1, 0);
       }
     }
-    if (phase === "impact" && age > 2.3) resetBubble();
+    if (phase === "impact" && age > 6) {
+      sceneImpactCount++;
+      if (sceneImpactCount % 3 === 0) selectScene();
+      resetBubble();
+    }
     for (const drop of droplets) {
       drop.age += dt;
       if (!reducedMotion.matches) {
@@ -117,39 +124,62 @@ const MeditationBubbles = (() => {
       }
     }
     droplets = droplets.filter(drop => drop.age < 2.4);
-    for (const ripple of ripples) ripple.age += dt;
-    ripples = ripples.filter(ripple => ripple.age < 3);
   }
 
-  function foliage() {
-    const atlas = document.getElementById("garden-sprout-atlas");
-    if (!atlas.naturalWidth) return;
-    const sw = atlas.naturalWidth / 3, sh = atlas.naturalHeight / 2;
-    // Un rideau peu dense conserve la transparence et les détails de la cascade.
-    for (let row = 0; row < 3; row++) {
-      for (let i = 0; i < Math.ceil(width / 46) + 1; i++) {
-        let x = i * 46 + (row % 2) * 20 - 20;
-        let y = wall() - 55 + row * 25;
-        let turn = Math.sin(i * 3.1 + row * 5) * 0.65;
-        for (const ripple of ripples) {
-          const distance = Math.hypot(x - ripple.x * width, y - ripple.y * height);
-          const wave = Math.exp(-distance / 110) * Math.exp(-ripple.age * 1.7) * ripple.strength;
-          if (!reducedMotion.matches) {
-            turn += Math.sin(ripple.age * 9 - distance / 35) * wave * 0.6;
-            x += Math.sin(ripple.age * 7) * wave * 11;
-            y += Math.sin(ripple.age * 9 - distance / 35) * wave * 7;
-          }
-        }
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(turn);
-        ctx.globalAlpha = 0.88;
-        ctx.drawImage(atlas, 0, sh, sw, sh, -32, -37, 64, 64);
-        ctx.restore();
+  function selectScene() {
+    const state = Progress.getState();
+    const available = [...new Set([0, state.speciesIndex, ...state.completedSpecies])]
+      .filter(index => index >= 0 && index < Bonsai.getTotalSpecies());
+    const otherScenes = available.filter(index => index !== scene);
+    const choices = otherScenes.length ? otherScenes : available;
+    scene = choices[Math.floor(Math.random() * choices.length)];
+    weather = Array.from({ length: scene === 3 ? 45 : 22 }, () => ({
+      x: Math.random(), y: Math.random(), size: 2 + Math.random() * 3,
+      speed: 0.025 + Math.random() * 0.035, turn: Math.random() * Math.PI * 2
+    }));
+    if (width && height) background();
+  }
+
+  function revealThought() {
+    const count = MEDITATION_AFFIRMATIONS.length;
+    lastThought = (lastThought + 1 + Math.floor(Math.random() * (count - 1))) % count;
+    const message = document.getElementById("med-affirm-text");
+    const language = document.documentElement.lang;
+    message.textContent = MEDITATION_AFFIRMATION_TRANSLATIONS[lastThought]?.[language] ??
+      MEDITATION_AFFIRMATIONS[lastThought];
+    message.lang = language;
+    message.style.left = "50%";
+    message.style.top = "50%";
+    message.classList.add("revealed");
+  }
+
+  function drawWeather(dt) {
+    const snowy = scene === 1 || scene === 6;
+    const rainy = scene === 3;
+    const leaf = document.getElementById("garden-maple-leaf");
+    for (const particle of weather) {
+      if (!reducedMotion.matches) {
+        particle.y += particle.speed * dt * (rainy ? 5 : 1);
+        particle.x += Math.sin(particle.turn + particle.y * 6) * dt * 0.008;
+        if (particle.y > 1.03) { particle.y = -0.03; particle.x = Math.random(); }
       }
+      ctx.save();
+      ctx.translate(particle.x * width, particle.y * height);
+      ctx.globalAlpha = 0.7;
+      if (rainy) {
+        ctx.strokeStyle = "#e6f1ed";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-2, 12); ctx.stroke();
+      } else if (snowy) {
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(0, 0, particle.size * 0.5, 0, Math.PI * 2); ctx.fill();
+      } else if (leaf.naturalWidth) {
+        ctx.rotate(particle.turn + particle.y * 3);
+        ctx.drawImage(leaf, -particle.size, -particle.size, particle.size * 2, particle.size * 2);
+      }
+      ctx.restore();
     }
   }
-
   function drawBubble() {
     const r = radius(), h = home();
     let x = bubble.x, y = bubble.y;
@@ -219,7 +249,7 @@ const MeditationBubbles = (() => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(backdrop, 0, 0);
       ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
-      foliage();
+      drawWeather(dt);
       drawBubble();
       for (const drop of droplets) {
         ctx.save();
@@ -322,9 +352,11 @@ const MeditationBubbles = (() => {
     resize();
     active = true;
     lastTime = 0;
-    droplets = []; ripples = [];
+    droplets = [];
+    sceneImpactCount = 0;
+    selectScene();
     resetBubble();
-    for (const id of ["garden-landscapes-1","garden-sprout-atlas"]) {
+    for (const id of ["garden-landscapes-1","garden-landscapes-2","garden-maple-leaf"]) {
       const image = document.getElementById(id);
       if (!image.complete) image.addEventListener("load", () => { if (active) resize(); }, { once:true });
     }
