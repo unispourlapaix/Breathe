@@ -136,16 +136,17 @@
   }
   #med-affirm-text.revealed { opacity:1; }
   .meditation-bubble {
-    position:absolute; width:76px; height:76px; border:0; touch-action:none;
-    cursor:pointer; background:radial-gradient(ellipse at 28% 25%,#fffd 0 9%,transparent 15%),linear-gradient(135deg,#dfede4,#b8d4cf 60%,#8bb5a5);
-    clip-path:polygon(28% 4%,73% 0,98% 30%,94% 75%,64% 100%,21% 91%,0 56%,5% 25%);
+    position:absolute; width:128px; height:128px; border:0; touch-action:none;
+    transform:translate(-50%,-50%); border-radius:50%;
+    cursor:grab; background:transparent; user-select:none;
   }
+  .meditation-bubble:active { cursor:grabbing; }
   #med-affirm-hint {
     position:absolute; bottom:12px; left:8%; width:84%; margin:0;
     pointer-events:none; font:14px/1.4 sans-serif; color:#304b36;
     background:#fff7e7db; padding:8px 12px; border-radius:14px;
   }
-  .meditation-bubble:focus-visible { outline:0; background:#f3d27a; }
+  .meditation-bubble:focus-visible { outline:2px solid #fffa; outline-offset:4px; }
   @media (prefers-reduced-motion:reduce) {
     #med-affirm-text { transition:none; }
   }

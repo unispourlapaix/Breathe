@@ -80,6 +80,9 @@ const LOCALIZED_TEXT = {
     ["Sincere advice comforts like a familiar scent.","心からの助言は、懐かしい香りのように心を和ませる。","Un consejo sincero reconforta como un aroma familiar.","Um conselho sincero conforta como um aroma familiar."],
   ],
   ui: {
+    "elasticReady": ["Touche la bulle, tire doucement puis relâche.", "Touch the bubble, pull gently, then release.", "泡に触れ、そっと引いて離しましょう。", "Toca la burbuja, tira suavemente y suelta.", "Toque na bolha, puxe suavemente e solte."],
+    "elasticPull": ["Étire-la comme un élastique. Elle partira dans le sens opposé.", "Stretch it like an elastic band. It will fly in the opposite direction.", "ゴムのように伸ばすと、反対の方向へ飛びます。", "Estírala como una goma. Saldrá en la dirección opuesta.", "Estique como um elástico. Ela voará na direção oposta."],
+    "elasticRest": ["Regarde la bulle flotter et les feuilles onduler.", "Watch the bubble drift and the leaves ripple.", "泡が漂い、葉が揺れるのを眺めましょう。", "Observa cómo flota la burbuja y ondulan las hojas.", "Veja a bolha flutuar e as folhas ondularem."],
     "gardenBreatheIn": ["Appuie pour gonfler la bulle. Inspire doucement, sans forcer.", "Press to fill the bubble. Breathe in gently, without forcing.", "押して泡を膨らませましょう。無理せず、ゆっくり吸って。", "Pulsa para inflar la burbuja. Inhala suavemente, sin forzar.", "Pressione para encher a bolha. Inspire suavemente, sem forçar."],
     "gardenRelease": ["Glisse doucement puis relâche en expirant. Tu peux relâcher quand tu veux.", "Drag gently, then release as you breathe out. Release whenever you need.", "そっと引いて、吐きながら離しましょう。いつ離しても大丈夫。", "Arrastra suavemente y suelta al exhalar. Puedes soltar cuando quieras.", "Arraste suavemente e solte ao expirar. Solte quando quiser."],
     "gardenBloom": ["Laisse ta bulle rejoindre les feuilles et regarde le jardin fleurir.", "Let your bubble reach the leaves and watch the garden bloom.", "泡が葉に届き、庭が花開くのを眺めましょう。", "Deja que la burbuja llegue a las hojas y observa florecer el jardín.", "Deixe a bolha chegar às folhas e veja o jardim florescer."],
@@ -92,7 +95,7 @@ const LOCALIZED_TEXT = {
     "replay": ["Rejouer","Play again","もう一度遊ぶ","Volver a jugar","Jogar de novo"],
     "back": ["Retour","Back","戻る","Volver","Voltar"],
     "affirmTitle": ["Encouragements","Affirmations","励ましの言葉","Afirmaciones","Afirmações"],
-    "affirmDesc": ["Gonfle une bulle, tire doucement et relâche pour faire fleurir un mur de feuilles et découvrir une pensée.", "Fill a bubble, drag gently and release to grow flowers on a leafy wall and discover an affirmation.", "泡を膨らませ、そっと引いて離すと、葉の壁に花が咲き、励ましの言葉が現れます。", "Infla una burbuja, arrastra suavemente y suelta para hacer florecer un muro de hojas y descubrir una afirmación.", "Encha uma bolha, arraste suavemente e solte para fazer florescer um muro de folhas e descobrir uma afirmação."],
+    "affirmDesc": ["Étire une grande bulle transparente et relâche-la doucement. À l’impact, les feuilles ondulent et des gouttelettes lumineuses se dispersent.", "Stretch a large transparent bubble and release it gently. On impact, leaves ripple and tiny glowing droplets scatter.", "大きな透明の泡を伸ばして、そっと離しましょう。ぶつかると葉が揺れ、小さな光るしずくが広がります。", "Estira una gran burbuja transparente y suéltala suavemente. Al chocar, las hojas ondulan y se dispersan gotitas luminosas.", "Estique uma grande bolha transparente e solte suavemente. Ao tocar, as folhas ondulam e gotinhas luminosas se espalham."],
     "pop0": ["POP!", "POP!", "ポン！", "¡POP!", "POP!"],
     "pop1": ["PAF!", "POOF!", "パフ！", "¡PUF!", "PUF!"],
     "pop2": ["PLIC!", "PLIP!", "プチッ！", "¡PLIP!", "PLIM!"],
